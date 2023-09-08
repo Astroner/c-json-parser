@@ -42,28 +42,28 @@ int main1(void) {
     buffer[3].byIndex = 0;
     buffer[3].typedValue.value.number = 11.f;
 
-    HashTable table = {
+    JsonTable table = {
         .buffer = buffer,
         .stringBuffer = "8",
         .maxSize = sizeof(buffer) / sizeof(buffer[0]),
         .size = 0,
     };
 
-    Destination dest = {
+    JsonDestination dest = {
         .isIndex = 1,
         .index = 0,
         .ctx = 0
     };
 
-    TableItem* item = HashTable_set(&table, &dest);
+    TableItem* item = JsonTable_set(&table, &dest);
     if(item) {
         item->typedValue.value.number = 1;
 
     }
 
-    HashTable_print(&table);
+    JsonTable_print(&table);
 
-    TableItem* stored = HashTable_getByIndex(&table, 0, 0);
+    TableItem* stored = JsonTable_getByIndex(&table, 0, 0);
 
 
     if(!stored) {
@@ -78,7 +78,7 @@ int main1(void) {
 
 int main(void) {
     char* input = readFile("test.json");
-
+    
     Json_createStatic(data, input, 150);
 
     if(Json_parse(data) < 0) return 1;

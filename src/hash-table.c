@@ -1,9 +1,10 @@
-#include <hash-table.h>
+#include "hash-table.h"
+#include "hash-table-methods.h"
 
 #include <string.h>
 #include <stdio.h>
 
-static unsigned long hashChars(char* str, size_t contextIndex) {
+static unsigned long Json_utils_hashChars(char* str, size_t contextIndex) {
     unsigned long hash = 5381;
     int c;
     while ((c = *str++))
@@ -18,7 +19,7 @@ static unsigned long hashChars(char* str, size_t contextIndex) {
     return hash;
 }
 
-static unsigned long hashIndex(size_t index, size_t contextIndex) {
+static unsigned long Json_utils_hashIndex(size_t index, size_t contextIndex) {
     unsigned long hash = 5381;
     
     unsigned char* indexBytes = (void*)&index;
@@ -36,7 +37,7 @@ static unsigned long hashIndex(size_t index, size_t contextIndex) {
     return hash;
 }
 
-static unsigned long hashKey(char* strBuffer, size_t nameStart, size_t nameLength, size_t contextIndex) {
+static unsigned long Json_utils_hashKey(char* strBuffer, size_t nameStart, size_t nameLength, size_t contextIndex) {
     unsigned long hash = 5381;
 
     for(size_t i = nameStart; i < nameStart + nameLength; i++)
@@ -51,7 +52,7 @@ static unsigned long hashKey(char* strBuffer, size_t nameStart, size_t nameLengt
 }
 
 
-TableItem* HashTable_set(HashTable* table, Destination* dest) {
+TableItem* JsonTable_set(JsonTable* table, JsonDestination* dest) {
     if(dest->isRoot) {
         table->buffer->isBusy = 1;
 
@@ -66,9 +67,9 @@ TableItem* HashTable_set(HashTable* table, Destination* dest) {
 
     unsigned long hash;
     if(dest->isIndex) {
-        hash = hashIndex(dest->index, dest->ctx);
+        hash = Json_utils_hashIndex(dest->index, dest->ctx);
     } else {
-        hash = hashKey(table->stringBuffer, dest->name.start, dest->name.length, dest->ctx);
+        hash = Json_utils_hashKey(table->stringBuffer, dest->name.start, dest->name.length, dest->ctx);
     }
 
 
@@ -102,32 +103,15 @@ TableItem* HashTable_set(HashTable* table, Destination* dest) {
     return table->buffer + index;
 }
 
-void HashTable_print(HashTable* table) {
+void JsonTable_print(JsonTable* table) {
     for(size_t i = 0; i < table->maxSize; i++) {
         TableItem* current = table->buffer + i;
         printf("%zu) %s\n", i, current->isBusy ? "BUSY" : "FREE");
     }
 }
 
-// TableItem* HashTable_get(HashTable* table, Destination* dest) {
-//     unsigned long hash = hashKey(table->stringBuffer, dest->name.start, dest->name.length, dest->ctx);
-
-//     size_t index = hash % table->maxSize;
-    
-//     TableItem* current = table->buffer + index;
-
-//     if(
-//         !current->isBusy 
-//         || current->contextIndex != dest->ctx 
-//         || current->name.start != dest->name.start 
-//         || current->name.length != dest->name.length
-//     ) return NULL;
-    
-//     return table->buffer + index;
-// }
-
-TableItem* HashTable_getByKey(HashTable* table, char* key, size_t contextIndex) {
-    unsigned long hash = hashChars(key, contextIndex);
+TableItem* JsonTable_getByKey(JsonTable* table, char* key, size_t contextIndex) {
+    unsigned long hash = Json_utils_hashChars(key, contextIndex);
 
     size_t startIndex = hash % table->maxSize;
     
@@ -152,9 +136,9 @@ TableItem* HashTable_getByKey(HashTable* table, char* key, size_t contextIndex) 
     return current;
 }
 
-TableItem* HashTable_getByIndex(HashTable* table, size_t index, size_t contextIndex) {
+TableItem* JsonTable_getByIndex(JsonTable* table, size_t index, size_t contextIndex) {
 
-    unsigned long hash = hashIndex(index, contextIndex);
+    unsigned long hash = Json_utils_hashIndex(index, contextIndex);
 
     size_t startIndex = hash % table->maxSize;
 

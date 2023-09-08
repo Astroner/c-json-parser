@@ -4,6 +4,7 @@
 #include <stdarg.h>
 
 #include "logs.h"
+#include "hash-table-methods.h"
 
 typedef struct Iterator {
     char* src;
@@ -39,7 +40,7 @@ typedef struct ParsingCtx {
 
 #define isWhiteSpace(name) ((name) == '\n' || (name) == '\r' || (name) == ' ')
 
-static int parseValue(Iterator* iterator, ParsingCtx* ctx, Json* json, Destination* dest);
+static int parseValue(Iterator* iterator, ParsingCtx* ctx, Json* json, JsonDestination* dest);
 
 static char Iterator_next(Iterator* iterator) {
     if(iterator->ended) return '\0';
@@ -85,7 +86,7 @@ static void printRange(char* str, size_t start, size_t length) {
 }
 
 
-static ParsingStatus parseArray(Iterator* iterator, ParsingCtx* ctx, Json* json, Destination* dest) {
+static ParsingStatus parseArray(Iterator* iterator, ParsingCtx* ctx, Json* json, JsonDestination* dest) {
     LOGS_SCOPE();
     
     size_t arrayIndex = ctx->ctxCounter + 1;
@@ -96,15 +97,15 @@ static ParsingStatus parseArray(Iterator* iterator, ParsingCtx* ctx, Json* json,
     };
 
     TableItem* arr;
-    CHECK_BOOLEAN((arr = HashTable_set(json->table, dest)), -1, "Setting array to the table");
-    arr->typedValue.type = TableItemTypeArray;
+    CHECK_BOOLEAN((arr = JsonTable_set(json->table, dest)), -1, "Setting array to the table");
+    arr->typedValue.type = JsonValueTypeArray;
     arr->typedValue.value.array.contextIndex = arrayIndex;
     arr->typedValue.value.array.size = 0;
 
 
     size_t arrSize = 0;
     while(1) {
-        Destination elementDestination = {
+        JsonDestination elementDestination = {
             .isIndex = 1,
             .index = arrSize,
             .ctx = arrayIndex
@@ -169,7 +170,7 @@ static ParsingStatus parseArray(Iterator* iterator, ParsingCtx* ctx, Json* json,
     return ParsingStatusOk;
 }
 
-static ParsingStatus parseString(Iterator* iterator, Range* result) {
+static ParsingStatus parseString(Iterator* iterator, JsonStringRange* result) {
     LOGS_SCOPE();
 
     size_t start = iterator->index + 1;
@@ -216,7 +217,7 @@ static ParsingStatus parseString(Iterator* iterator, Range* result) {
     return ParsingStatusError;
 }
 
-static ParsingStatus parseNumber(Iterator* iterator, ParsingCtx* ctx, Json* json, Destination* dest) {
+static ParsingStatus parseNumber(Iterator* iterator, ParsingCtx* ctx, Json* json, JsonDestination* dest) {
     LOGS_SCOPE();
 
     int isNegative = iterator->current == '-';
@@ -283,8 +284,8 @@ static ParsingStatus parseNumber(Iterator* iterator, ParsingCtx* ctx, Json* json
     LOG_LN("Result: %f", result);
 
     TableItem* item;
-    CHECK_BOOLEAN(item = HashTable_set(json->table, dest), -1, "Setting value into the hash table");
-    item->typedValue.type = TableItemTypeNumber;
+    CHECK_BOOLEAN(item = JsonTable_set(json->table, dest), -1, "Setting value into the hash table");
+    item->typedValue.type = JsonValueTypeNumber;
     item->typedValue.value.number = result;
 
 
@@ -303,7 +304,7 @@ static ParsingStatus parseNumber(Iterator* iterator, ParsingCtx* ctx, Json* json
     return ParsingStatusOk;
 }
 
-static ParsingStatus parseTrue(Iterator* iterator, Json* json, Destination* dest) {
+static ParsingStatus parseTrue(Iterator* iterator, Json* json, JsonDestination* dest) {
     LOGS_SCOPE();
 
     if(Iterator_next(iterator) != 'r') return -1;
@@ -314,14 +315,14 @@ static ParsingStatus parseTrue(Iterator* iterator, Json* json, Destination* dest
 
 
     TableItem* item;
-    CHECK_BOOLEAN(item = HashTable_set(json->table, dest), -1, "Setting value into the hash table");
-    item->typedValue.type = TableItemTypeBoolean;
+    CHECK_BOOLEAN(item = JsonTable_set(json->table, dest), -1, "Setting value into the hash table");
+    item->typedValue.type = JsonValueTypeBoolean;
     item->typedValue.value.boolean = 1;
 
     return 0;
 }
 
-static ParsingStatus parseFalse(Iterator* iterator, Json* json, Destination* dest) {
+static ParsingStatus parseFalse(Iterator* iterator, Json* json, JsonDestination* dest) {
     LOGS_SCOPE();
 
     if(Iterator_next(iterator) != 'a') return -1;
@@ -332,14 +333,14 @@ static ParsingStatus parseFalse(Iterator* iterator, Json* json, Destination* des
     LOG_LN("false");
 
     TableItem* item;
-    CHECK_BOOLEAN(item = HashTable_set(json->table, dest), -1, "Setting value into the hash table");
-    item->typedValue.type = TableItemTypeBoolean;
+    CHECK_BOOLEAN(item = JsonTable_set(json->table, dest), -1, "Setting value into the hash table");
+    item->typedValue.type = JsonValueTypeBoolean;
     item->typedValue.value.boolean = 0;
 
     return 0;
 }
 
-static ParsingStatus parseNull(Iterator* iterator, Json* json, Destination* dest) {
+static ParsingStatus parseNull(Iterator* iterator, Json* json, JsonDestination* dest) {
     LOGS_SCOPE();
 
     if(Iterator_next(iterator) != 'u') return -1;
@@ -349,8 +350,8 @@ static ParsingStatus parseNull(Iterator* iterator, Json* json, Destination* dest
     LOG_LN("null");
 
     TableItem* item;
-    CHECK_BOOLEAN(item = HashTable_set(json->table, dest), -1, "Setting value into the hash table");
-    item->typedValue.type = TableItemTypeNull;
+    CHECK_BOOLEAN(item = JsonTable_set(json->table, dest), -1, "Setting value into the hash table");
+    item->typedValue.type = JsonValueTypeNull;
 
     return 0;
 }
@@ -369,7 +370,7 @@ static ParsingStatus parseField(Iterator* iterator, size_t objectCtx, ParsingCtx
     }
 
 
-    Destination fieldDest = {
+    JsonDestination fieldDest = {
         .isRoot = 0,
         .ctx = objectCtx
     };
@@ -381,7 +382,7 @@ static ParsingStatus parseField(Iterator* iterator, size_t objectCtx, ParsingCtx
     CHECK_RETURN(parseValue(iterator, ctx, json, &fieldDest), "Field value");
 }
 
-static ParsingStatus parseObject(Iterator* iterator, ParsingCtx* ctx, Json* json, Destination* dest) {
+static ParsingStatus parseObject(Iterator* iterator, ParsingCtx* ctx, Json* json, JsonDestination* dest) {
     LOGS_SCOPE();
 
     size_t objIndex = ctx->ctxCounter + 1;
@@ -393,8 +394,8 @@ static ParsingStatus parseObject(Iterator* iterator, ParsingCtx* ctx, Json* json
 
 
     TableItem* obj;
-    CHECK_BOOLEAN(obj = HashTable_set(json->table, dest), -1, "Setting value into the hash table");
-    obj->typedValue.type = TableItemTypeObject;
+    CHECK_BOOLEAN(obj = JsonTable_set(json->table, dest), -1, "Setting value into the hash table");
+    obj->typedValue.type = JsonValueTypeObject;
     obj->typedValue.value.object.contextIndex = objIndex;
     obj->typedValue.value.object.size = 0;
 
@@ -453,7 +454,7 @@ static ParsingStatus parseObject(Iterator* iterator, ParsingCtx* ctx, Json* json
     return ParsingStatusOk;
 }
 
-static ParsingStatus parseValue(Iterator* iterator, ParsingCtx* ctx, Json* json, Destination* dest) {
+static ParsingStatus parseValue(Iterator* iterator, ParsingCtx* ctx, Json* json, JsonDestination* dest) {
     LOGS_SCOPE();
 
     char ch;
@@ -466,12 +467,12 @@ static ParsingStatus parseValue(Iterator* iterator, ParsingCtx* ctx, Json* json,
         } else if(ch == '[') {
             return parseArray(iterator, ctx, json, dest);
         } else if(ch == '"') {
-            Range string;
+            JsonStringRange string;
             CHECK(parseString(iterator, &string), "Parsing string");
 
             TableItem* item;
-            CHECK_BOOLEAN(item = HashTable_set(json->table, dest), -1, "Setting value into the hash table");
-            item->typedValue.type = TableItemTypeString;
+            CHECK_BOOLEAN(item = JsonTable_set(json->table, dest), -1, "Setting value into the hash table");
+            item->typedValue.type = JsonValueTypeString;
             item->typedValue.value.string.start = string.start;
             item->typedValue.value.string.length = string.length;
 
@@ -509,7 +510,7 @@ int Json_parse(Json* json) {
         .nesting = NestedStructureNone,
     };
 
-    Destination dest = {
+    JsonDestination dest = {
         .isRoot = 1,
     };
 
@@ -526,7 +527,7 @@ JsonValue* Json_getRoot(Json* json) {
 }
 
 int Json_asNumber(JsonValue* item, float* result) {
-    if(item->type != TableItemTypeNumber) return 0;
+    if(item->type != JsonValueTypeNumber) return 0;
 
     if(result) *result = item->value.number;
 
@@ -534,7 +535,7 @@ int Json_asNumber(JsonValue* item, float* result) {
 }
 
 int Json_asBoolean(JsonValue* item, int* result) {
-    if(item->type != TableItemTypeBoolean) return 0;
+    if(item->type != JsonValueTypeBoolean) return 0;
 
     if(result) *result = item->value.boolean;
 
@@ -542,7 +543,7 @@ int Json_asBoolean(JsonValue* item, int* result) {
 }
 
 int Json_asString(Json* json, JsonValue* item, char* result, size_t bufferLength, size_t* actualLength) {
-    if(item->type != TableItemTypeString) return 0;
+    if(item->type != JsonValueTypeString) return 0;
 
     if(actualLength) *actualLength = item->value.string.length;
 
@@ -564,7 +565,7 @@ int Json_asString(Json* json, JsonValue* item, char* result, size_t bufferLength
     return 1;
 }
 int Json_asArray(JsonValue* item, JsonArray* array) {
-    if(item->type != TableItemTypeArray) return 0;
+    if(item->type != JsonValueTypeArray) return 0;
     if(array) {
         array->contextIndex = item->value.array.contextIndex;
         array->size = item->value.array.size;
@@ -574,7 +575,7 @@ int Json_asArray(JsonValue* item, JsonArray* array) {
 }
 
 int Json_asObject(JsonValue* item, JsonObject* obj) {
-    if(item->type != TableItemTypeObject) return 0;
+    if(item->type != JsonValueTypeObject) return 0;
     if(obj) {
         obj->contextIndex = item->value.object.contextIndex;
         obj->size = item->value.object.size;
@@ -584,14 +585,14 @@ int Json_asObject(JsonValue* item, JsonObject* obj) {
 }
 
 int Json_isNull(JsonValue* item) {
-    return item->type == TableItemTypeNull;
+    return item->type == JsonValueTypeNull;
 }
 
 JsonValue* Json_getKey(Json* json, JsonValue* item, char* key) {
     if(!json->parsed) return NULL;
 
-    if(item->type != TableItemTypeObject) return NULL;
-    TableItem* result = HashTable_getByKey(json->table, key, item->value.object.contextIndex);
+    if(item->type != JsonValueTypeObject) return NULL;
+    TableItem* result = JsonTable_getByKey(json->table, key, item->value.object.contextIndex);
     
     if(!result) return NULL;
 
@@ -601,9 +602,9 @@ JsonValue* Json_getKey(Json* json, JsonValue* item, char* key) {
 JsonValue* Json_getIndex(Json* json, JsonValue* item, size_t index) {
     if(!json->parsed) return NULL;
 
-    if(item->type != TableItemTypeArray) return NULL;
+    if(item->type != JsonValueTypeArray) return NULL;
 
-    TableItem* result = HashTable_getByIndex(json->table, index, item->value.array.contextIndex);
+    TableItem* result = JsonTable_getByIndex(json->table, index, item->value.array.contextIndex);
 
     if(!result) return NULL;
 
@@ -619,26 +620,26 @@ static void printSpacer(size_t times) {
 
 static void printValue(Json* json, JsonValue* val, size_t depth) {
     switch(val->type) {
-        case TableItemTypeNumber:
+        case JsonValueTypeNumber:
             printf("%f", val->value.number);
             break;
 
-        case TableItemTypeBoolean:
+        case JsonValueTypeBoolean:
             printf("%s", val->value.boolean ? "true" : "false");
             break;
 
-        case TableItemTypeString: {
+        case JsonValueTypeString: {
             printf("\"");
             printRange(json->table->stringBuffer, val->value.string.start, val->value.string.length);
             printf("\"");
             break;
         }
 
-        case TableItemTypeNull:
+        case JsonValueTypeNull:
             printf("null");
             break;
         
-        case TableItemTypeArray: 
+        case JsonValueTypeArray: 
             if(val->value.array.size == 0) {
                 printf("[]");
                 break;
@@ -655,7 +656,7 @@ static void printValue(Json* json, JsonValue* val, size_t depth) {
 
             break;
 
-        case TableItemTypeObject: {
+        case JsonValueTypeObject: {
             if(val->value.object.size == 0) {
                 printf("{}");
                 break;
@@ -754,27 +755,27 @@ void Json_printType(JsonValue* root) {
     }
 
     switch(root->type) {
-        case TableItemTypeArray:
+        case JsonValueTypeArray:
             printf("Array\n");
             break;
 
-        case TableItemTypeObject:
+        case JsonValueTypeObject:
             printf("Object\n");
             break;
 
-        case TableItemTypeBoolean:
+        case JsonValueTypeBoolean:
             printf("Boolean\n");
             break;
 
-        case TableItemTypeNull:
+        case JsonValueTypeNull:
             printf("Null\n");
             break;
 
-        case TableItemTypeNumber:
+        case JsonValueTypeNumber:
             printf("Null\n");
             break;
 
-        case TableItemTypeString:
+        case JsonValueTypeString:
             printf("String\n");
             break;
     }

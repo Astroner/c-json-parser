@@ -3,19 +3,19 @@
 
 #include <stdlib.h>
 
-typedef enum TableItemType {
-    TableItemTypeString,
-    TableItemTypeNumber,
-    TableItemTypeObject,
-    TableItemTypeBoolean,
-    TableItemTypeArray,
-    TableItemTypeNull,
-} TableItemType;
+typedef enum JsonValueType {
+    JsonValueTypeString,
+    JsonValueTypeNumber,
+    JsonValueTypeObject,
+    JsonValueTypeBoolean,
+    JsonValueTypeArray,
+    JsonValueTypeNull,
+} JsonValueType;
 
-typedef struct Range {
+typedef struct JsonStringRange {
     size_t start;
     size_t length;
-} Range;
+} JsonStringRange;
 
 typedef struct JsonArray {
     size_t contextIndex;
@@ -27,24 +27,24 @@ typedef struct JsonObject {
     size_t size;
 } JsonObject;
 
-typedef union TableItemValue {
-    Range string;
+typedef union JsonValueUnion {
+    JsonStringRange string;
     float number;
     int boolean;
     JsonObject object;
     JsonArray array;
-} TableItemValue;
+} JsonValueUnion;
 
 typedef struct JsonValue {
-    TableItemType type;
-    TableItemValue value;
+    JsonValueType type;
+    JsonValueUnion value;
 } JsonValue;
 
 typedef struct TableItem {
     int isBusy;
     size_t contextIndex;
 
-    Range name;
+    JsonStringRange name;
 
     int byIndex;
     size_t index;
@@ -52,30 +52,22 @@ typedef struct TableItem {
     JsonValue typedValue;
 } TableItem;
 
-typedef struct HashTable {
+typedef struct JsonTable {
     size_t maxSize;
     size_t size;
 
     TableItem* buffer;
 
     char* stringBuffer;
-} HashTable;
+} JsonTable;
 
-typedef struct Destination {
+typedef struct JsonDestination {
     int isRoot;
-    Range name;
+    JsonStringRange name;
     size_t ctx;
 
     int isIndex;
     size_t index;
-} Destination;
-
-TableItem* HashTable_set(HashTable* table, Destination* dest);
-
-TableItem* HashTable_get(HashTable* table, Destination* dest);
-TableItem* HashTable_getByKey(HashTable* table, char* key, size_t contextIndex);
-TableItem* HashTable_getByIndex(HashTable* table, size_t index, size_t contextIndex);
-
-void HashTable_print(HashTable* table);
+} JsonDestination;
 
 #endif // HASH_TABLE_H
