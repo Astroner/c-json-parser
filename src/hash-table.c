@@ -1,10 +1,11 @@
 #include "hash-table.h"
 #include "hash-table-methods.h"
 
+
 #include <string.h>
 #include <stdio.h>
 
-static unsigned long Json_utils_hashChars(char* str, size_t contextIndex) {
+static unsigned long Json_internal_hashChars(char* str, size_t contextIndex) {
     unsigned long hash = 5381;
     int c;
     while ((c = *str++))
@@ -19,7 +20,7 @@ static unsigned long Json_utils_hashChars(char* str, size_t contextIndex) {
     return hash;
 }
 
-static unsigned long Json_utils_hashIndex(size_t index, size_t contextIndex) {
+static unsigned long Json_internal_hashIndex(size_t index, size_t contextIndex) {
     unsigned long hash = 5381;
     
     unsigned char* indexBytes = (void*)&index;
@@ -37,7 +38,7 @@ static unsigned long Json_utils_hashIndex(size_t index, size_t contextIndex) {
     return hash;
 }
 
-static unsigned long Json_utils_hashKey(char* strBuffer, size_t nameStart, size_t nameLength, size_t contextIndex) {
+static unsigned long Json_internal_hashKey(char* strBuffer, size_t nameStart, size_t nameLength, size_t contextIndex) {
     unsigned long hash = 5381;
 
     for(size_t i = nameStart; i < nameStart + nameLength; i++)
@@ -52,7 +53,7 @@ static unsigned long Json_utils_hashKey(char* strBuffer, size_t nameStart, size_
 }
 
 
-TableItem* JsonTable_set(JsonTable* table, JsonDestination* dest) {
+Json_internal_TableItem* Json_internal_Table_set(Json_internal_Table* table, Json_internal_Destination* dest) {
     if(dest->isRoot) {
         table->buffer->isBusy = 1;
 
@@ -67,9 +68,9 @@ TableItem* JsonTable_set(JsonTable* table, JsonDestination* dest) {
 
     unsigned long hash;
     if(dest->isIndex) {
-        hash = Json_utils_hashIndex(dest->index, dest->ctx);
+        hash = Json_internal_hashIndex(dest->index, dest->ctx);
     } else {
-        hash = Json_utils_hashKey(table->stringBuffer, dest->name.start, dest->name.length, dest->ctx);
+        hash = Json_internal_hashKey(table->stringBuffer, dest->name.start, dest->name.length, dest->ctx);
     }
 
 
@@ -103,20 +104,20 @@ TableItem* JsonTable_set(JsonTable* table, JsonDestination* dest) {
     return table->buffer + index;
 }
 
-void JsonTable_print(JsonTable* table) {
+void Json_internal_Table_print(Json_internal_Table* table) {
     for(size_t i = 0; i < table->maxSize; i++) {
-        TableItem* current = table->buffer + i;
+        Json_internal_TableItem* current = table->buffer + i;
         printf("%zu) %s\n", i, current->isBusy ? "BUSY" : "FREE");
     }
 }
 
-TableItem* JsonTable_getByKey(JsonTable* table, char* key, size_t contextIndex) {
-    unsigned long hash = Json_utils_hashChars(key, contextIndex);
+Json_internal_TableItem* Json_internal_Table_getByKey(Json_internal_Table* table, char* key, size_t contextIndex) {
+    unsigned long hash = Json_internal_hashChars(key, contextIndex);
 
     size_t startIndex = hash % table->maxSize;
     
     size_t index = startIndex;
-    TableItem* current = table->buffer + index;
+    Json_internal_TableItem* current = table->buffer + index;
 
     while(
         !current->isBusy 
@@ -136,15 +137,15 @@ TableItem* JsonTable_getByKey(JsonTable* table, char* key, size_t contextIndex) 
     return current;
 }
 
-TableItem* JsonTable_getByIndex(JsonTable* table, size_t index, size_t contextIndex) {
+Json_internal_TableItem* Json_internal_Table_getByIndex(Json_internal_Table* table, size_t index, size_t contextIndex) {
 
-    unsigned long hash = Json_utils_hashIndex(index, contextIndex);
+    unsigned long hash = Json_internal_hashIndex(index, contextIndex);
 
     size_t startIndex = hash % table->maxSize;
 
     size_t bufferIndex = startIndex;
     
-    TableItem* current = table->buffer + bufferIndex;
+    Json_internal_TableItem* current = table->buffer + bufferIndex;
 
     while(
         !current->isBusy 

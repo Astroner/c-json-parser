@@ -1,17 +1,21 @@
-#if !defined(PARSE_H)
-#define PARSE_H
 
 #include "hash-table.h"
 
+#include <string.h>
+
+#if !defined(PARSE_H)
+#define PARSE_H
+
+
 typedef struct Json {
     int parsed;
-    JsonTable* table;
+    Json_internal_Table* table;
 } Json;
 
 #define Json_createStatic(name, src, elementsNumber)\
-    TableItem name##__buffer[elementsNumber];\
-    memset(name##__buffer, 0, elementsNumber * sizeof(TableItem));\
-    JsonTable name##__table = {\
+    Json_internal_TableItem name##__buffer[elementsNumber];\
+    memset(name##__buffer, 0, elementsNumber * sizeof(Json_internal_TableItem));\
+    Json_internal_Table name##__table = {\
         .maxSize = elementsNumber,\
         .size = 0,\
         .buffer = name##__buffer,\

@@ -1,21 +1,21 @@
 #if !defined(HASH_TABLE_H)
 #define HASH_TABLE_H
 
-#include <stdlib.h>
+#include <stddef.h>
 
-typedef enum JsonValueType {
-    JsonValueTypeString,
-    JsonValueTypeNumber,
-    JsonValueTypeObject,
-    JsonValueTypeBoolean,
-    JsonValueTypeArray,
-    JsonValueTypeNull,
-} JsonValueType;
+typedef enum Json_internal_TableValueType {
+    Json_internal_TableValueTypeString,
+    Json_internal_TableValueTypeNumber,
+    Json_internal_TableValueTypeObject,
+    Json_internal_TableValueTypeBoolean,
+    Json_internal_TableValueTypeArray,
+    Json_internal_TableValueTypeNull,
+} Json_internal_TableValueType;
 
-typedef struct JsonStringRange {
+typedef struct Json_internal_StringRange {
     size_t start;
     size_t length;
-} JsonStringRange;
+} Json_internal_StringRange;
 
 typedef struct JsonArray {
     size_t contextIndex;
@@ -27,47 +27,47 @@ typedef struct JsonObject {
     size_t size;
 } JsonObject;
 
-typedef union JsonValueUnion {
-    JsonStringRange string;
+typedef union Json_internal_TableValueUnion {
+    Json_internal_StringRange string;
     float number;
     int boolean;
     JsonObject object;
     JsonArray array;
-} JsonValueUnion;
+} Json_internal_TableValueUnion;
 
 typedef struct JsonValue {
-    JsonValueType type;
-    JsonValueUnion value;
+    Json_internal_TableValueType type;
+    Json_internal_TableValueUnion value;
 } JsonValue;
 
-typedef struct TableItem {
+typedef struct Json_internal_TableItem {
     int isBusy;
     size_t contextIndex;
 
-    JsonStringRange name;
+    Json_internal_StringRange name;
 
     int byIndex;
     size_t index;
 
     JsonValue typedValue;
-} TableItem;
+} Json_internal_TableItem;
 
-typedef struct JsonTable {
+typedef struct Json_internal_Table {
     size_t maxSize;
     size_t size;
 
-    TableItem* buffer;
+    Json_internal_TableItem* buffer;
 
     char* stringBuffer;
-} JsonTable;
+} Json_internal_Table;
 
-typedef struct JsonDestination {
+typedef struct Json_internal_Destination {
     int isRoot;
-    JsonStringRange name;
+    Json_internal_StringRange name;
     size_t ctx;
 
     int isIndex;
     size_t index;
-} JsonDestination;
+} Json_internal_Destination;
 
 #endif // HASH_TABLE_H

@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-#if defined(DO_LOGS)
+#if defined(JSON_DO_LOGS)
     #define LOGS_SCOPE(name)\
         const char* logs__scope__name = #name;\
         if(!logs__scope__name[0]) logs__scope__name = __func__;\
