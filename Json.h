@@ -982,7 +982,7 @@ int Json_asNumber(JsonValue* item, float* result) {
 }
 
 int Json_asBoolean(JsonValue* item, int* result) {
-    if(item->type != Json_internal_TableValueTypeBoolean) return 0;
+    if(!item || item->type != Json_internal_TableValueTypeBoolean) return 0;
 
     if(result) *result = item->value.boolean;
 
@@ -990,7 +990,7 @@ int Json_asBoolean(JsonValue* item, int* result) {
 }
 
 int Json_asString(Json* json, JsonValue* item, char* result, size_t bufferLength, size_t* actualLength) {
-    if(item->type != Json_internal_TableValueTypeString) return 0;
+    if(!item || item->type != Json_internal_TableValueTypeString) return 0;
 
     if(actualLength) *actualLength = item->value.string.length;
 
