@@ -2,6 +2,7 @@
 This is simple C STB-like library for json parsing, that uses static memory.
 
 # Table of Content
+ - [Usage](#usage)
 
 # Usage 
 ```c
@@ -50,30 +51,28 @@ int main(void) {
 }
 ```
 As in any STB-like library you need to once include implementation by defining JSON_IMPLEMENTATION before including the library.
-**Json_createStatic** macro takes 3 arguments:
- - **name** - the name of the JSON variable
- - **src** - source string
- - **buffer size** - size of memory buffer to store values. Size is not provided in bytes but in number of referenceable elements. For example:
-    ```json
-    {
-        "a": 33,
-        "b": "str",
-        "c": [22]
-    }
-    ```
-    In this JSON we only have 5 referenceable elements: root, "a", "b", "c" and 22 as array element.
 
-**Json_parse** parses **Json** object. If there is syntax error or insufficient memory it returns -1 otherwise 0.
+Let's take a closer look at used functions:
+ - **Json_createStatic** macro takes 3 arguments:
+    - **name** - the name of the Json variable
+    - **src** - source string
+    - **buffer size** - size of memory buffer to store values. Size is not provided in bytes but in number of referenceable elements. For example:
+        ```json
+        {
+            "a": 33,
+            "b": "str",
+            "c": [22]
+        }
+        ```
+        In this JSON we only have 5 referenceable elements: root, "a", "b", "c" and 22 as array element.
+ - **Json_parse** - parses **Json** object. If there is syntax error or insufficient memory it returns -1 otherwise 0.
+ - **Json_asArray** checks that provided **JsonValue** is an array and if so uses **length** pointer to return array length.
+ - **Json_getIndex** checks that provided **JsonValue** of **Json** is an array and if so returns **JsonValue** from provided index otherwise returns **NULL**
+ - **Json_asNumber** checks that provided **JsonValue** is a number and if so uses **value** pointer to return float value.
 
-**Json_asArray** checks that provided **JsonValue** is an array and if so uses **length** pointer to return array length.
-
-**Json_getIndex** checks that provided **JsonValue** of **Json** is an array and if so returns **JsonValue** from provided index otherwise returns **NULL**
-
-**Json_asNumber** checks that provided **JsonValue** is a number and if so uses **value** pointer to return float value.
-
-Basic algorithm looks like:
+Overall, basic usage algorithm looks like:
  - Create Json object
- - Parse it
- - Use function **Json_getRoot()** to get the root
- - Use functions like **Json_getKey()** or **Json_getIndex()** to traverse through the Json structure
- - Use functions like **Json_asNumber()**, **Json_asString()**, **Json_asArray()** and e.t.c. to get values
+ - Parse it using **Json_parse()** function
+ - Use **Json_getRoot()** to get the root
+ - Use **Json_getKey()** or **Json_getIndex()** to traverse through the Json structure
+ - Use **Json_asNumber()**, **Json_asString()**, **Json_asArray()** and e.t.c. to get values
