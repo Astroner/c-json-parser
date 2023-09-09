@@ -56,8 +56,8 @@ JsonValue* Json_chainVA(Json* json, JsonValue* item, ...);
 int Json_asNumber(JsonValue* item, float* result);
 int Json_asBoolean(JsonValue* item, int* result);
 int Json_asString(Json* json, JsonValue* item, char* result, size_t bufferLength, size_t* actualLength);
-int Json_asArray(JsonValue* item, JsonArray* array);
-int Json_asObject(JsonValue* item, JsonObject* obj);
+int Json_asArray(JsonValue* item, size_t* length);
+int Json_asObject(JsonValue* item, size_t* size);
 int Json_isNull(JsonValue* item);
 
 void Json_print(Json* json, JsonValue* root);

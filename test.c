@@ -1,4 +1,4 @@
-#define JSON_IMPLEMENTATION
+// #define JSON_IMPLEMENTATION
 #include "Json.h"
 #include <assert.h>
 #include <stdio.h>
@@ -17,9 +17,9 @@ void generalTest() {
 
     assert((root = Json_getRoot(json)));
 
-    JsonObject rootObj;
-    assert(Json_asObject(root, &rootObj));
-    assert(rootObj.size == 1);
+    size_t size;
+    assert(Json_asObject(root, &size));
+    assert(size == 1);
 
     JsonValue* s;
     assert(s = Json_getKey(json, root, "s"));

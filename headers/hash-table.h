@@ -17,22 +17,20 @@ typedef struct Json_internal_StringRange {
     size_t length;
 } Json_internal_StringRange;
 
-typedef struct JsonArray {
-    size_t contextIndex;
-    size_t size;
-} JsonArray;
-
-typedef struct JsonObject {
-    size_t contextIndex;
-    size_t size;
-} JsonObject;
-
 typedef union Json_internal_TableValueUnion {
     Json_internal_StringRange string;
     float number;
     int boolean;
-    JsonObject object;
-    JsonArray array;
+
+    struct {
+        size_t contextIndex;
+        size_t size;
+    } object;
+    
+    struct {
+        size_t contextIndex;
+        size_t size;
+    } array;
 } Json_internal_TableValueUnion;
 
 typedef struct JsonValue {

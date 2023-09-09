@@ -3,54 +3,27 @@
 
 #include "json.h"
 
-char* readFile(char* path) {
-    FILE* f = fopen(path, "r");
-
-    fseek(f, 0, SEEK_END);
-
-    fpos_t size;
-
-    fgetpos(f, &size);
-
-    char* result = malloc(size + 1);
-
-    fseek(f, 0, SEEK_SET);
-
-    fread(result, 1, size, f);
-
-    result[size] = '\0';
-
-    fclose(f);
-
-    return result;
-}
-
 int main(void) {
-    char* input = readFile("test.json");
+    Json_createStatic(json, "[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]", 20); // Creating JSON object with macro
 
-    Json_createStatic(data, input, 150);
+    if(Json_parse(json) < 0) { // Parsing values
+        printf("Failed to parse JSON");
+        return 1;
+    }
 
-    if(Json_parse(data) < 0) return 1;
+    JsonValue* root = Json_getRoot(json); // Get root element of the JSON
 
-    JsonValue* root = Json_getRoot(data);
-    
-    JsonValue* title = Json_chainVA(
-        data, 
-        root,
-        "onResponseReceivedActions",
-        "!+0",
-        "appendContinuationItemsAction",
-        "continuationItems",
-        "!+0",
-        "richSectionRenderer",
-        "content",
-        "backgroundPromoRenderer",
-        "title",
-        "simpleText",
-        NULL
-    );
+    size_t length;
+    Json_asArray(root, &length);
 
-    Json_print(data, title);
+    printf("Array length: %zu\n", length);
+    for(size_t i = 0; i < length; i++) {
+        JsonValue* el = Json_getIndex(json, root, i);
+
+        float value;
+        Json_asNumber(el, &value);
+        printf("[%.2zu]: %.2f\n", i, value);
+    }
 
     return 0;
 }

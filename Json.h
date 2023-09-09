@@ -17,22 +17,20 @@ typedef struct Json_internal_StringRange {
     size_t length;
 } Json_internal_StringRange;
 
-typedef struct JsonArray {
-    size_t contextIndex;
-    size_t size;
-} JsonArray;
-
-typedef struct JsonObject {
-    size_t contextIndex;
-    size_t size;
-} JsonObject;
-
 typedef union Json_internal_TableValueUnion {
     Json_internal_StringRange string;
     float number;
     int boolean;
-    JsonObject object;
-    JsonArray array;
+
+    struct {
+        size_t contextIndex;
+        size_t size;
+    } object;
+    
+    struct {
+        size_t contextIndex;
+        size_t size;
+    } array;
 } Json_internal_TableValueUnion;
 
 typedef struct JsonValue {
@@ -129,8 +127,8 @@ JsonValue* Json_chainVA(Json* json, JsonValue* item, ...);
 int Json_asNumber(JsonValue* item, float* result);
 int Json_asBoolean(JsonValue* item, int* result);
 int Json_asString(Json* json, JsonValue* item, char* result, size_t bufferLength, size_t* actualLength);
-int Json_asArray(JsonValue* item, JsonArray* array);
-int Json_asObject(JsonValue* item, JsonObject* obj);
+int Json_asArray(JsonValue* item, size_t* length);
+int Json_asObject(JsonValue* item, size_t* size);
 int Json_isNull(JsonValue* item);
 
 void Json_print(Json* json, JsonValue* root);
@@ -1013,21 +1011,19 @@ int Json_asString(Json* json, JsonValue* item, char* result, size_t bufferLength
 
     return 1;
 }
-int Json_asArray(JsonValue* item, JsonArray* array) {
+
+int Json_asArray(JsonValue* item, size_t* length) {
     if(item->type != Json_internal_TableValueTypeArray) return 0;
-    if(array) {
-        array->contextIndex = item->value.array.contextIndex;
-        array->size = item->value.array.size;
+    if(length) {
+        *length = item->value.array.size;
     }
 
     return 1;
 }
-
-int Json_asObject(JsonValue* item, JsonObject* obj) {
+int Json_asObject(JsonValue* item, size_t* size) {
     if(item->type != Json_internal_TableValueTypeObject) return 0;
-    if(obj) {
-        obj->contextIndex = item->value.object.contextIndex;
-        obj->size = item->value.object.size;
+    if(size) {
+        *size = item->value.object.size;
     }
 
     return 1;
