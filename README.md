@@ -281,7 +281,7 @@ int main(void) {
     return 0;
 }
 ```
-> As you can see, iterated properties are not in the same order as in the initial due to hashing limitations.
+> As you can see, iterated properties are not in the same order as in the source due to hashing limitations.
 
 Use **JsonObjectIterator_init()** to initiate iterator with provided **Json** and **JsonValue** and then simply use **JsonObjectIterator_next()** to iterate over the object.
 **JsonObjectIterator_next()** uses **JsonProperty** structure with following definition:
