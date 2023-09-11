@@ -4,7 +4,7 @@
 #include "json.h"
 
 int main(void) {
-    Json_createStatic(json, "[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]", 20); // Creating JSON object with macro
+    Json_createStatic(json, "{ \"a\": 22, \"n\": 1 }", 20); // Creating JSON object with macro
 
     if(Json_parse(json) < 0) { // Parsing values
         printf("Failed to parse JSON");
@@ -13,16 +13,23 @@ int main(void) {
 
     JsonValue* root = Json_getRoot(json); // Get root element of the JSON
 
-    size_t length;
-    Json_asArray(root, &length);
+    JsonObjectIterator iterator;
+    JsonObjectIterator_init(json, root, &iterator);
 
-    printf("Array length: %zu\n", length);
-    for(size_t i = 0; i < length; i++) {
-        JsonValue* el = Json_getIndex(json, root, i);
-
+    JsonField field;
+    while(JsonObjectIterator_next(&iterator, &field)) {
+        JsonStringIterator strIter;
+        JsonStringIterator_init(json, &field.name, &strIter);
+        
+        char ch;
+        while((ch = JsonStringIterator_next(&strIter))) {
+            putchar(ch);
+        }
+        
         float value;
-        Json_asNumber(el, &value);
-        printf("[%.2zu]: %.2f\n", i, value);
+        Json_asNumber(field.value, &value);
+
+        printf(": %.2f\n", value);
     }
 
     return 0;

@@ -76,3 +76,37 @@ Overall, basic usage algorithm looks like:
  - Use **Json_getRoot()** to get the root
  - Use **Json_getKey()** or **Json_getIndex()** to traverse through the Json structure
  - Use **Json_asNumber()**, **Json_asString()**, **Json_asArray()** and e.t.c. to get values
+
+# API Reference
+## Working with types
+Here is the list of functions to work with data types.
+
+### Number
+Use function **Json_asNumber** to interpret **JsonValue** as number.
+```c
+int Json_asNumber(JsonValue* item, float* value);
+```
+ - **returns** - **1** if provided **JsonValue** is a number else it returns **0**
+ - **item** - **JsonValue** to parse
+ - **value** - **NULLABLE** - pointer to memory location where number value will be placed
+
+### Boolean
+Use function **Json_asBoolean** to interpret **JsonValue** as boolean.
+```c
+int Json_asBoolean(JsonValue* item, int* value);
+```
+ - **returns** - **1** if provided **JsonValue** is a boolean else it returns **0**
+ - **item** - **JsonValue** to parse
+ - **value** - **NULLABLE** - pointer to memory location where boolean value will be placed
+
+### String
+Use function **Json_asString** to interpret **JsonValue** as string.
+```c
+int Json_asString(Json* json, JsonValue* item, char* buffer, size_t bufferLength, size_t* actualLength);
+```
+ - **returns** - **1** if provided **JsonValue** is a string else it returns **0**
+ - **json** - **Json** object
+ - **item** - **JsonValue** to parse
+ - **buffer** - **NULLABLE** - pointer to memory location where array of chars will be placed(null-terminated)
+ - **bufferLength** - size of **buffer** in bytes
+ - **actualLength** - **NULLABLE** - pointer to memory location where actual size of string will be placed(including null-terminator)

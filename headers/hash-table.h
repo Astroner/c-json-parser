@@ -12,13 +12,13 @@ typedef enum Json_internal_TableValueType {
     Json_internal_TableValueTypeNull,
 } Json_internal_TableValueType;
 
-typedef struct Json_internal_StringRange {
+typedef struct JsonStringRange {
     size_t start;
     size_t length;
-} Json_internal_StringRange;
+} JsonStringRange;
 
 typedef union Json_internal_TableValueUnion {
-    Json_internal_StringRange string;
+    JsonStringRange string;
     float number;
     int boolean;
 
@@ -42,7 +42,7 @@ typedef struct Json_internal_TableItem {
     int isBusy;
     size_t contextIndex;
 
-    Json_internal_StringRange name;
+    JsonStringRange name;
 
     int byIndex;
     size_t index;
@@ -61,7 +61,7 @@ typedef struct Json_internal_Table {
 
 typedef struct Json_internal_Destination {
     int isRoot;
-    Json_internal_StringRange name;
+    JsonStringRange name;
     size_t ctx;
 
     int isIndex;

@@ -29,6 +29,10 @@ typedef struct Json {
 
 int Json_parse(Json* json);
 
+void Json_reset(Json* json);
+
+void Json_setSource(Json* json, char* src);
+
 JsonValue* Json_getRoot(Json* json);
 JsonValue* Json_getKey(Json* json, JsonValue* item, char* key);
 JsonValue* Json_getIndex(Json* json, JsonValue* item, size_t index);
@@ -53,9 +57,37 @@ JsonValue* Json_chainVA(Json* json, JsonValue* item, ...);
     JsonSelector resultName##__selectors[] = { __VA_ARGS__ };\
     JsonValue* resultName = Json_chain(json, root, resultName##__selectors, sizeof(resultName##__selectors) / sizeof(resultName##__selectors[0]));\
 
-int Json_asNumber(JsonValue* item, float* result);
-int Json_asBoolean(JsonValue* item, int* result);
-int Json_asString(Json* json, JsonValue* item, char* result, size_t bufferLength, size_t* actualLength);
+typedef struct JsonObjectIterator {
+    Json* json;
+    size_t ctx;
+    size_t size;
+    size_t index;
+    size_t found;
+} JsonObjectIterator;
+int JsonObjectIterator_init(Json* json, JsonValue* obj, JsonObjectIterator* iterator);
+typedef struct JsonField {
+    JsonStringRange name;
+    JsonValue* value;
+} JsonField;
+int JsonObjectIterator_next(JsonObjectIterator* iterator, JsonField* field);
+int JsonObjectIterator_index(JsonObjectIterator* iterator);
+
+size_t JsonField_name(Json* json, JsonField* field, char* buffer, size_t bufferSize);
+
+void JsonStringRange_print(Json* json, JsonStringRange* range);
+
+typedef struct JsonStringIterator {
+    char* buffer;
+    size_t index;
+    size_t end;
+} JsonStringIterator;
+
+void JsonStringIterator_init(Json* json, JsonStringRange* range, JsonStringIterator* iterator);
+char JsonStringIterator_next(JsonStringIterator* iterator);
+
+int Json_asNumber(JsonValue* item, float* value);
+int Json_asBoolean(JsonValue* item, int* value);
+int Json_asString(Json* json, JsonValue* item, char* buffer, size_t bufferLength, size_t* actualLength);
 int Json_asArray(JsonValue* item, size_t* length);
 int Json_asObject(JsonValue* item, size_t* size);
 int Json_isNull(JsonValue* item);

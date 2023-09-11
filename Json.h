@@ -12,13 +12,13 @@ typedef enum Json_internal_TableValueType {
     Json_internal_TableValueTypeNull,
 } Json_internal_TableValueType;
 
-typedef struct Json_internal_StringRange {
+typedef struct JsonStringRange {
     size_t start;
     size_t length;
-} Json_internal_StringRange;
+} JsonStringRange;
 
 typedef union Json_internal_TableValueUnion {
-    Json_internal_StringRange string;
+    JsonStringRange string;
     float number;
     int boolean;
 
@@ -42,7 +42,7 @@ typedef struct Json_internal_TableItem {
     int isBusy;
     size_t contextIndex;
 
-    Json_internal_StringRange name;
+    JsonStringRange name;
 
     int byIndex;
     size_t index;
@@ -61,7 +61,7 @@ typedef struct Json_internal_Table {
 
 typedef struct Json_internal_Destination {
     int isRoot;
-    Json_internal_StringRange name;
+    JsonStringRange name;
     size_t ctx;
 
     int isIndex;
@@ -100,6 +100,10 @@ typedef struct Json {
 
 int Json_parse(Json* json);
 
+void Json_reset(Json* json);
+
+void Json_setSource(Json* json, char* src);
+
 JsonValue* Json_getRoot(Json* json);
 JsonValue* Json_getKey(Json* json, JsonValue* item, char* key);
 JsonValue* Json_getIndex(Json* json, JsonValue* item, size_t index);
@@ -124,9 +128,37 @@ JsonValue* Json_chainVA(Json* json, JsonValue* item, ...);
     JsonSelector resultName##__selectors[] = { __VA_ARGS__ };\
     JsonValue* resultName = Json_chain(json, root, resultName##__selectors, sizeof(resultName##__selectors) / sizeof(resultName##__selectors[0]));\
 
-int Json_asNumber(JsonValue* item, float* result);
-int Json_asBoolean(JsonValue* item, int* result);
-int Json_asString(Json* json, JsonValue* item, char* result, size_t bufferLength, size_t* actualLength);
+typedef struct JsonObjectIterator {
+    Json* json;
+    size_t ctx;
+    size_t size;
+    size_t index;
+    size_t found;
+} JsonObjectIterator;
+int JsonObjectIterator_init(Json* json, JsonValue* obj, JsonObjectIterator* iterator);
+typedef struct JsonField {
+    JsonStringRange name;
+    JsonValue* value;
+} JsonField;
+int JsonObjectIterator_next(JsonObjectIterator* iterator, JsonField* field);
+int JsonObjectIterator_index(JsonObjectIterator* iterator);
+
+size_t JsonField_name(Json* json, JsonField* field, char* buffer, size_t bufferSize);
+
+void JsonStringRange_print(Json* json, JsonStringRange* range);
+
+typedef struct JsonStringIterator {
+    char* buffer;
+    size_t index;
+    size_t end;
+} JsonStringIterator;
+
+void JsonStringIterator_init(Json* json, JsonStringRange* range, JsonStringIterator* iterator);
+char JsonStringIterator_next(JsonStringIterator* iterator);
+
+int Json_asNumber(JsonValue* item, float* value);
+int Json_asBoolean(JsonValue* item, int* value);
+int Json_asString(Json* json, JsonValue* item, char* buffer, size_t bufferLength, size_t* actualLength);
 int Json_asArray(JsonValue* item, size_t* length);
 int Json_asObject(JsonValue* item, size_t* size);
 int Json_isNull(JsonValue* item);
@@ -322,7 +354,7 @@ void Json_internal_printRange(char* str, size_t start, size_t length);
 
 void Json_internal_printRange(char* str, size_t start, size_t length) {
     for(size_t i = start; i < start + length; i++) {
-        printf("%c", str[i]);
+        putchar(str[i]);
     }
 }
 
@@ -611,7 +643,7 @@ static Json_internal_ParsingStatus Json_internal_parseArray(Json_internal_Iterat
     return ParsingStatusOk;
 }
 
-static Json_internal_ParsingStatus Json_internal_parseString(Json_internal_Iterator* iterator, Json_internal_StringRange* result) {
+static Json_internal_ParsingStatus Json_internal_parseString(Json_internal_Iterator* iterator, JsonStringRange* result) {
     LOGS_SCOPE();
 
     size_t start = iterator->index + 1;
@@ -908,7 +940,7 @@ Json_internal_ParsingStatus Json_internal_parseValue(Json_internal_Iterator* ite
         } else if(ch == '[') {
             return Json_internal_parseArray(iterator, ctx, json, dest);
         } else if(ch == '"') {
-            Json_internal_StringRange string;
+            JsonStringRange string;
             CHECK(Json_internal_parseString(iterator, &string), "Parsing string");
 
             Json_internal_TableItem* item;
@@ -967,6 +999,17 @@ int Json_parse(Json* json) {
     return 0;
 }
 
+void Json_reset(Json* json) {
+    json->parsed = 0;
+    json->table->size = 0;
+    memset(json->table->buffer, 0, json->table->maxSize * sizeof(json->table->buffer[0]));
+}
+
+void Json_setSource(Json* json, char* src) {
+    Json_reset(json);
+    json->table->stringBuffer = src;
+}
+
 JsonValue* Json_getRoot(Json* json) {
     if(!json->parsed) return NULL;
 
@@ -992,7 +1035,7 @@ int Json_asBoolean(JsonValue* item, int* result) {
 int Json_asString(Json* json, JsonValue* item, char* result, size_t bufferLength, size_t* actualLength) {
     if(!item || item->type != Json_internal_TableValueTypeString) return 0;
 
-    if(actualLength) *actualLength = item->value.string.length;
+    if(actualLength) *actualLength = item->value.string.length + 1;
 
     if(!result) return 1;
 
@@ -1000,7 +1043,7 @@ int Json_asString(Json* json, JsonValue* item, char* result, size_t bufferLength
     if(bufferLength >= item->value.string.length + 1) {
         limit = item->value.string.length;
     } else {
-        limit = item->value.string.length - 1;
+        limit = bufferLength - 1;
     }
 
     for(size_t i = 0; i < limit; i++) {
@@ -1057,13 +1100,13 @@ JsonValue* Json_getIndex(Json* json, JsonValue* item, size_t index) {
 }
 
 
-static void printSpacer(size_t times) {
+static void Json_internal_printSpacer(size_t times) {
     for(size_t i = 0; i < times; i++) {
         printf("    ");
     }
 }
 
-static void printValue(Json* json, JsonValue* val, size_t depth) {
+static void Json_internal_printValue(Json* json, JsonValue* val, size_t depth) {
     switch(val->type) {
         case Json_internal_TableValueTypeNumber:
             printf("%f", val->value.number);
@@ -1091,12 +1134,12 @@ static void printValue(Json* json, JsonValue* val, size_t depth) {
             }
             printf("[\n");
             for(size_t i = 0; i < val->value.array.size; i++) {
-                printSpacer(depth + 1);
-                printValue(json, Json_getIndex(json, val, i), depth + 1);
+                Json_internal_printSpacer(depth + 1);
+                Json_internal_printValue(json, Json_getIndex(json, val, i), depth + 1);
                 if(i != val->value.array.size - 1) printf(",");
                 printf("\n");
             }
-            printSpacer(depth);
+            Json_internal_printSpacer(depth);
             printf("]");
 
             break;
@@ -1108,22 +1151,22 @@ static void printValue(Json* json, JsonValue* val, size_t depth) {
             }
             printf("{\n");
 
-            size_t found = 0;
-            for(size_t i = 0 ; i < json->table->maxSize; i++) {
-                Json_internal_TableItem* current = json->table->buffer + i;
-                if(!current->isBusy || current->contextIndex != val->value.object.contextIndex) continue;
-                found++;
-                printSpacer(depth + 1);
+            JsonObjectIterator iterator;
+            JsonObjectIterator_init(json, val, &iterator);
+
+            JsonField field;
+            while(JsonObjectIterator_next(&iterator, &field)) {
+                Json_internal_printSpacer(depth + 1);
                 printf("\"");
-                Json_internal_printRange(json->table->stringBuffer, current->name.start, current->name.length);
+                Json_internal_printRange(json->table->stringBuffer, field.name.start, field.name.length);
                 printf("\": ");
-                printValue(json, &current->typedValue, depth + 1);
-                if(found < val->value.object.size) {
+                Json_internal_printValue(json, field.value, depth + 1);
+                if(iterator.found < val->value.object.size) {
                     printf(",");
                 }
                 printf("\n");
             }
-            printSpacer(depth);
+            Json_internal_printSpacer(depth);
             printf("}");
 
             break;
@@ -1138,7 +1181,7 @@ void Json_print(Json* json, JsonValue* root) {
         return;
     }
 
-    printValue(json, root, 0);
+    Json_internal_printValue(json, root, 0);
 
     printf("\n");
 }
@@ -1224,6 +1267,83 @@ void Json_printType(JsonValue* root) {
             printf("String\n");
             break;
     }
+}
+
+int JsonObjectIterator_init(Json* json, JsonValue* obj, JsonObjectIterator* iterator) {
+    if(obj->type != Json_internal_TableValueTypeObject) {
+        iterator->found = obj->value.object.size;
+        return -1;
+    }
+
+    iterator->json = json;
+    iterator->ctx = obj->value.object.contextIndex;
+    iterator->size = obj->value.object.size;
+    iterator->index = 0;
+    iterator->found = 0;
+
+    return 0;
+}
+
+int JsonObjectIterator_next(JsonObjectIterator* iterator, JsonField* field) {
+    if(iterator->found == iterator->size || iterator->index == iterator->json->table->maxSize - 1) return 0;
+
+    for(size_t i = iterator->index; i < iterator->json->table->maxSize; i++) {
+        if(
+            !iterator->json->table->buffer[i].isBusy ||
+            iterator->json->table->buffer[i].contextIndex != iterator->ctx
+        ) continue;
+
+        iterator->index = i + 1;
+        iterator->found++;
+
+        field->name.start = iterator->json->table->buffer[i].name.start;
+        field->name.length = iterator->json->table->buffer[i].name.length;
+        field->value = &iterator->json->table->buffer[i].typedValue;
+
+        return 1;
+    }
+
+    iterator->index = iterator->json->table->maxSize - 1;
+
+    return 0;
+}
+
+int JsonObjectIterator_index(JsonObjectIterator* iterator) {
+    if(iterator->found == 0) return 0;
+
+    return iterator->found - 1;
+}
+
+size_t JsonField_name(Json* json, JsonField* field, char* buffer, size_t bufferSize) {
+    size_t limit;
+    if(bufferSize >= field->name.length + 1) {
+        limit = field->name.length;
+    } else {
+        limit = bufferSize - 1;
+    }
+
+    for(size_t i = 0; i < limit; i++) {
+        buffer[i] = json->table->stringBuffer[i + field->name.start];
+    }
+
+    buffer[limit] = '\0';
+
+    return field->name.length;
+}
+
+void JsonStringRange_print(Json* json, JsonStringRange* range) {
+    Json_internal_printRange(json->table->stringBuffer, range->start, range->length);
+}
+
+void JsonStringIterator_init(Json* json, JsonStringRange* range, JsonStringIterator* iterator) {
+    iterator->index = range->start;
+    iterator->end = range->start + range->length;
+    iterator->buffer = json->table->stringBuffer;
+}
+
+char JsonStringIterator_next(JsonStringIterator* iterator) {
+    if(iterator->index < iterator->end) return iterator->buffer[iterator->index++];
+    return '\0';
 }
 
 #endif // JSON_IMPLEMENTATION

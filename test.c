@@ -1,4 +1,4 @@
-// #define JSON_IMPLEMENTATION
+#define JSON_IMPLEMENTATION
 #include "Json.h"
 #include <assert.h>
 #include <stdio.h>

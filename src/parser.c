@@ -89,7 +89,7 @@ static Json_internal_ParsingStatus Json_internal_parseArray(Json_internal_Iterat
     return ParsingStatusOk;
 }
 
-static Json_internal_ParsingStatus Json_internal_parseString(Json_internal_Iterator* iterator, Json_internal_StringRange* result) {
+static Json_internal_ParsingStatus Json_internal_parseString(Json_internal_Iterator* iterator, JsonStringRange* result) {
     LOGS_SCOPE();
 
     size_t start = iterator->index + 1;
@@ -386,7 +386,7 @@ Json_internal_ParsingStatus Json_internal_parseValue(Json_internal_Iterator* ite
         } else if(ch == '[') {
             return Json_internal_parseArray(iterator, ctx, json, dest);
         } else if(ch == '"') {
-            Json_internal_StringRange string;
+            JsonStringRange string;
             CHECK(Json_internal_parseString(iterator, &string), "Parsing string");
 
             Json_internal_TableItem* item;
