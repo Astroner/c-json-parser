@@ -72,7 +72,7 @@ Let's take a closer look at used functions:
 
 Overall, basic usage algorithm looks like:
  - Create Json object
- - Parse it using **Json_parse()** function
+ - Parse it with **Json_parse()**
  - Use **Json_getRoot()** to get the root
  - Use **Json_getKey()** or **Json_getIndex()** to traverse through the Json structure
  - Use **Json_asNumber()**, **Json_asString()**, **Json_asArray()** and e.t.c. to get values
