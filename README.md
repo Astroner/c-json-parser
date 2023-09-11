@@ -22,6 +22,9 @@ This is simple C STB-like library for json parsing, that uses static memory.
         - [Json_chain](#json_chain)
         - [Json_chainM](#json_chainm)
         - [Json_chainVA](#json_chainva)
+     - [Printing](#printing)
+         - [Json_print](#json_print)
+         - [Json_printType](#json_printtype)
 
 # Usage 
 ```c
@@ -496,3 +499,18 @@ int main(void) {
 }
 ```
 > Of Course this function is slower than Json_chain() due to selectors parsing
+
+## Printing
+This section describes set of function to print **Json** info into console:
+
+### Json_print
+This function prints given **JsonValue** into stdout
+```c
+void Json_print(Json* json, JsonValue* root);
+```
+
+### Json_printType
+This function prints type of the given **JsonValue** into stdout
+```c
+void Json_printType(JsonValue* root);
+```
