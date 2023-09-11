@@ -147,7 +147,7 @@ void JsonStringRange_copy(Json* json, JsonStringRange* range, char* buffer, size
 ```
  - **json** - **Json** object
  - **range** - string range to copy
- - **buffer** - pointer to memory locations where the string will be copied and *null-terminated*
+ - **buffer** - pointer to memory locations where the string will be copied and **null-terminated**
  - **bufferSize** - buffer size
 
 If **bufferSize** is insufficient the function will copy only piece of string range.
