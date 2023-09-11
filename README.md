@@ -14,8 +14,14 @@ This is simple C STB-like library for json parsing, that uses static memory.
              - [Print](#print)
              - [Iterate](#iterate)
          - [Array](#array)
+             - [Accessing element](#accessing-elements)
          - [Object](#object)
-             - [Properties](#properties)
+             - [Accessing properties](#accessing-properties)
+             - [Iterating over properties](#iterating-over-properties)
+     - [Chaining](#chaining)
+        - [Json_chain](#json_chain)
+        - [Json_chainM](#json_chainm)
+        - [Json_chainVA](#json_chainva)
 
 # Usage 
 ```c
@@ -200,6 +206,16 @@ int Json_asArray(JsonValue* item, size_t* length);
  - **item** - **JsonValue** to parse
  - **length** - **NULLABLE** - pointer to memory location where array length will be placed
 
+#### Accessing elements
+Use function **Json_getIndex** to access specific array element
+```c
+JsonValue* Json_getIndex(Json* json, JsonValue* item, size_t index);
+```
+ - **returns** - **NULLABLE** - **JsonValue** if provided **JsonValue** is an array and it has element with provided **index** and **NULL** if it is not.
+ - **json** - **Json** structure
+ - **item** - **JsonValue** to traverse
+ - **index** - element index
+
 ### Object
 Use function **Json_asObject** to interpret **JsonValue** as object.
 ```c
@@ -209,7 +225,17 @@ int Json_asObject(JsonValue* item, size_t* size);
  - **item** - **JsonValue** to parse
  - **length** - **NULLABLE** - pointer to memory location where number of object fields will be placed
 
-#### Properties
+#### Accessing properties
+Use function **Json_getKey** to access specific object property
+```c
+JsonValue* Json_getKey(Json* json, JsonValue* item, char* key);
+```
+ - **returns** - **NULLABLE** - **JsonValue** if provided **JsonValue** is an object and it has property with provided **key** and **NULL** if it is not.
+ - **json** - **Json** structure
+ - **item** - **JsonValue** to traverse
+ - **key** - property key
+
+#### Iterating over properties
 Use **JsonObjectIterator** to iterate over object properties:
 ```c
 #include <stdio.h>
@@ -255,7 +281,7 @@ int main(void) {
     return 0;
 }
 ```
-*As you can see, iterated properties are not in the same order as in the initial due to hashing limitations.*
+> As you can see, iterated properties are not in the same order as in the initial due to hashing limitations.
 
 Use **JsonObjectIterator_init()** to initiate iterator with provided **Json** and **JsonValue** and then simply use **JsonObjectIterator_next()** to iterate over the object.
 **JsonObjectIterator_next()** uses **JsonProperty** structure with following definition:
@@ -266,3 +292,207 @@ struct JsonProperty {
 };
 ```
 It is just a pair of **key** and **value** on which you can use related to these structures methods: **JsonStringRange_copy()**, **Json_asNumber()** and e.t.c.
+
+## Chaining
+This section describes methods for key chaining to simplify traversal through nested structures.
+Let's say you have this nested structure:
+```json
+{
+    "entities": [
+        {
+            "name": {
+                "text": "Train"
+            }
+        }
+    ]
+}
+```
+And you just want to get this **"Train"** string. To do so with basic traversing functions you would need to write something like this:
+```c
+#include <stdio.h>
+
+#define JSON_IMPLEMENTATION
+#include "Json.h"
+
+int main(void) {
+    char* src = readFile("example.json");
+    Json_createStatic(json, src, 5);
+
+    Json_parse(json);
+
+    JsonValue* root = Json_getRoot(json);
+
+    JsonValue* string = Json_getKey(
+        json,
+        Json_getKey(
+            json,
+            Json_getIndex(
+                json,
+                Json_getKey(
+                    json,
+                    root,
+                    "entities"
+                ),
+                0
+            ),
+            "name"
+        ),
+        "text"
+    );
+
+    Json_print(json, string); // stdout: "Train"
+
+    free(src);
+
+    return 0;
+}
+```
+So here you can see that nested json will require nested function calls to reach specific property, which is not really convenient.
+To simplify this process the library provides several functions, which are described below.
+
+### Json_chain
+This function is a straight way to chain several selectors:
+```c
+JsonValue* Json_chain(Json* json, JsonValue* item, JsonSelector* selectors, size_t selectorsSize);
+```
+ - **returns** - **NULLABLE** - **JsonValue** if element matching **selectors** exists and **NULL** if it is not
+ - **json** - parsed **Json** structure
+ - **item** - item to traverse 
+ - **selectors** - array of selectors
+ - **selectorsSize** - number of selectors
+
+Selector is represented in format of **JsonSelector**:
+```c
+typedef enum JsonSelectorType {
+    JsonKey,
+    JsonIndex
+} JsonSelectorType;
+
+typedef struct JsonSelector {
+    JsonSelectorType type;
+    union {
+        char* key;
+        size_t index;
+    } q;
+} JsonSelector;
+```
+
+Basic usage example:
+```c
+#include <stdio.h>
+
+#define JSON_IMPLEMENTATION
+#include "Json.h"
+
+int main(void) {
+    char* src = readFile("example.json");
+    Json_createStatic(json, src, 5);
+
+    Json_parse(json);
+
+    JsonValue* root = Json_getRoot(json);
+
+    JsonSelector selectors[] = {
+        { .type = JsonKey, .q.key = "entities" },
+        { .type = JsonIndex, .q.index = 0 },
+        { .type = JsonKey, .q.key = "name" },
+        { .type = JsonKey, .q.key = "text" },
+    };
+
+    JsonValue* string = Json_chain(json, root, selectors, sizeof(selectors) / sizeof(selectors[0]));
+
+    Json_print(json, string); // stdout: "Train"
+
+    free(src);
+
+    return 0;
+}
+```
+So here we are just specifying list of **selectors** and the passing it to **Json_chain()** to get exactly the same result as in the initial code example.
+
+### Json_chainM
+It is just a simplification macro for [Json_chain()](#json_chain)
+```c
+#define Json_chainM(resultName, json, root, ...)
+```
+ - **resultName** - variable name which will be defined to store the result
+ - **json** - **Json** object
+ - **root** - starting **JsonValue**
+ - **VA_ARGS** - list of selectors
+
+Example:
+```c
+#include <stdio.h>
+
+#define JSON_IMPLEMENTATION
+#include "Json.h"
+
+int main(void) {
+    char* src = readFile("example.json");
+    Json_createStatic(json, src, 5);
+
+    Json_parse(json);
+
+    JsonValue* root = Json_getRoot(json);
+
+    Json_chainM(string, json, root, 
+        { .type = JsonKey, .q.key = "entities" },
+        { .type = JsonIndex, .q.index = 0 },
+        { .type = JsonKey, .q.key = "name" },
+        { .type = JsonKey, .q.key = "text" }
+    );
+
+    Json_print(json, string); // stdout: "Train"
+
+    free(src);
+
+    return 0;
+}
+```
+
+### Json_chainVA
+This function uses variadic arguments for selectors
+```c
+JsonValue* Json_chainVA(Json* json, JsonValue* item, ...);
+```
+ - **returns** - **NULLABLE** - **JsonValue** if element matching **selectors** exists and **NULL** if it is not
+ - **json** - parsed **Json** structure
+ - **item** - item to traverse 
+ - **VA_ARGS** - list of string selectors terminated with **NULL**
+   This selectors has the following format:
+     - If the selector begins with "!+" then if will be interpreted as index
+     - Everything else will be interpreted as key
+
+Example:
+```c
+#include <stdio.h>
+
+#define JSON_IMPLEMENTATION
+#include "Json.h"
+
+int main(void) {
+    char* src = readFile("example.json");
+    Json_createStatic(json, src, 5);
+
+    Json_parse(json);
+
+    JsonValue* root = Json_getRoot(json);
+
+    JsonValue* string = Json_chainVA(
+        json, 
+        root,
+        "entities",
+        "!+0",
+        "name",
+        "text",
+        NULL
+    );
+
+    Json_print(json, string);
+
+    free(src);
+
+    return 0;
+}
+```
+> Of Course this function is slower than Json_chain() due to selectors parsing
