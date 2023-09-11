@@ -16,10 +16,10 @@ int main(void) {
     JsonObjectIterator iterator;
     JsonObjectIterator_init(json, root, &iterator);
 
-    JsonField field;
+    JsonProperty field;
     while(JsonObjectIterator_next(&iterator, &field)) {
         JsonStringIterator strIter;
-        JsonStringIterator_init(json, &field.name, &strIter);
+        JsonStringIterator_init(json, field.name, &strIter);
         
         char ch;
         while((ch = JsonStringIterator_next(&strIter))) {

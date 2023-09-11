@@ -53,12 +53,21 @@ $(LIB_NAME): $(wildcard headers/*.h) $(wildcard src/*.c)
 lib: $(LIB_NAME)
 	echo "Done"
 
-.PHONY: test
-test: $(LIB_NAME) test.c
-	gcc -o ./test -Wall -Wextra -std=c99 -pedantic test.c
-	./test
-	rm ./test
+.PHONY: test-units
+test-units: $(LIB_NAME) tests/test-units.c
+	gcc -o ./test-units -Wall -Wextra -std=c99 -pedantic ./tests/test-units.c
+	./test-units
+	rm ./test-units
+
+.PHONY: test-examples
+test-examples: $(LIB_NAME)
+	gcc -o ./test-examples tests/test-examples.c
+	./test-examples
+	rm ./test-examples
+
+.PHONY: tests
+tests: $(LIB_NAME) test-units test-examples
 
 .PHONY: clean
 clean: 
-	rm -f $(OBJECTS) $(EXECUTABLE) $(LIB_NAME)
+	rm -f $(OBJECTS) $(EXECUTABLE) $(LIB_NAME) $(wildcard tests/examples/*/*.gen.txt tests/examples/*/*.gen)

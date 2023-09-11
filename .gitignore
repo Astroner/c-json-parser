@@ -4,3 +4,7 @@
 parse
 test.json
 ./test
+*.gen.txt
+*.gen
+test-examples
+test-units

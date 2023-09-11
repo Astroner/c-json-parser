@@ -12,6 +12,7 @@
 
 int Json_parse(Json* json) {
     LOGS_SCOPE();
+    Json_reset(json);
 
     Json_internal_Iterator iterator = {
         .index = -1,
@@ -66,27 +67,10 @@ int Json_asBoolean(JsonValue* item, int* result) {
     return 1;
 }
 
-int Json_asString(Json* json, JsonValue* item, char* result, size_t bufferLength, size_t* actualLength) {
-    if(!item || item->type != Json_internal_TableValueTypeString) return 0;
+JsonStringRange* Json_asString(JsonValue* item) {
+    if(!item || item->type != Json_internal_TableValueTypeString) return NULL;
 
-    if(actualLength) *actualLength = item->value.string.length + 1;
-
-    if(!result) return 1;
-
-    size_t limit;
-    if(bufferLength >= item->value.string.length + 1) {
-        limit = item->value.string.length;
-    } else {
-        limit = bufferLength - 1;
-    }
-
-    for(size_t i = 0; i < limit; i++) {
-        result[i] = json->table->stringBuffer[i + item->value.string.start];
-    }
-
-    result[limit] = '\0';
-
-    return 1;
+    return &item->value.string;
 }
 
 int Json_asArray(JsonValue* item, size_t* length) {
@@ -97,6 +81,7 @@ int Json_asArray(JsonValue* item, size_t* length) {
 
     return 1;
 }
+
 int Json_asObject(JsonValue* item, size_t* size) {
     if(item->type != Json_internal_TableValueTypeObject) return 0;
     if(size) {
@@ -188,13 +173,13 @@ static void Json_internal_printValue(Json* json, JsonValue* val, size_t depth) {
             JsonObjectIterator iterator;
             JsonObjectIterator_init(json, val, &iterator);
 
-            JsonField field;
-            while(JsonObjectIterator_next(&iterator, &field)) {
+            JsonProperty property;
+            while(JsonObjectIterator_next(&iterator, &property)) {
                 Json_internal_printSpacer(depth + 1);
                 printf("\"");
-                Json_internal_printRange(json->table->stringBuffer, field.name.start, field.name.length);
+                JsonStringRange_print(json, property.name);
                 printf("\": ");
-                Json_internal_printValue(json, field.value, depth + 1);
+                Json_internal_printValue(json, property.value, depth + 1);
                 if(iterator.found < val->value.object.size) {
                     printf(",");
                 }
@@ -318,7 +303,7 @@ int JsonObjectIterator_init(Json* json, JsonValue* obj, JsonObjectIterator* iter
     return 0;
 }
 
-int JsonObjectIterator_next(JsonObjectIterator* iterator, JsonField* field) {
+int JsonObjectIterator_next(JsonObjectIterator* iterator, JsonProperty* property) {
     if(iterator->found == iterator->size || iterator->index == iterator->json->table->maxSize - 1) return 0;
 
     for(size_t i = iterator->index; i < iterator->json->table->maxSize; i++) {
@@ -330,9 +315,8 @@ int JsonObjectIterator_next(JsonObjectIterator* iterator, JsonField* field) {
         iterator->index = i + 1;
         iterator->found++;
 
-        field->name.start = iterator->json->table->buffer[i].name.start;
-        field->name.length = iterator->json->table->buffer[i].name.length;
-        field->value = &iterator->json->table->buffer[i].typedValue;
+        property->name = &iterator->json->table->buffer[i].name;
+        property->value = &iterator->json->table->buffer[i].typedValue;
 
         return 1;
     }
@@ -348,21 +332,19 @@ int JsonObjectIterator_index(JsonObjectIterator* iterator) {
     return iterator->found - 1;
 }
 
-size_t JsonField_name(Json* json, JsonField* field, char* buffer, size_t bufferSize) {
+void JsonStringRange_copy(Json* json, JsonStringRange* range, char* buffer, size_t bufferSize) {
     size_t limit;
-    if(bufferSize >= field->name.length + 1) {
-        limit = field->name.length;
+    if(bufferSize >= range->length + 1) {
+        limit = range->length;
     } else {
         limit = bufferSize - 1;
     }
 
     for(size_t i = 0; i < limit; i++) {
-        buffer[i] = json->table->stringBuffer[i + field->name.start];
+        buffer[i] = json->table->stringBuffer[i + range->start];
     }
 
     buffer[limit] = '\0';
-
-    return field->name.length;
 }
 
 void JsonStringRange_print(Json* json, JsonStringRange* range) {

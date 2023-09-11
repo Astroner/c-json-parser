@@ -3,6 +3,19 @@ This is simple C STB-like library for json parsing, that uses static memory.
 
 # Table of Content
  - [Usage](#usage)
+ - [API Reference](#api-reference)
+     - [Working with types](#working-with-types)
+         - [Null](#null)
+         - [Number](#number)
+         - [Boolean](#boolean)
+         - [String](#string)
+             - [JsonStringRange](#jsonstringrange)
+             - [Copy](#copy)
+             - [Print](#print)
+             - [Iterate](#iterate)
+         - [Array](#array)
+         - [Object](#object)
+             - [Properties](#properties)
 
 # Usage 
 ```c
@@ -81,6 +94,14 @@ Overall, basic usage algorithm looks like:
 ## Working with types
 Here is the list of functions to work with data types.
 
+### Null
+Use function **Json_isNull** to interpret **JsonValue** as null.
+```c
+int Json_isNull(JsonValue* item);
+```
+ - **returns** - **1** if provided **JsonValue** is null else it returns **0**
+ - **item** - **JsonValue** to parse
+
 ### Number
 Use function **Json_asNumber** to interpret **JsonValue** as number.
 ```c
@@ -102,11 +123,146 @@ int Json_asBoolean(JsonValue* item, int* value);
 ### String
 Use function **Json_asString** to interpret **JsonValue** as string.
 ```c
-int Json_asString(Json* json, JsonValue* item, char* buffer, size_t bufferLength, size_t* actualLength);
+JsonStringRange* Json_asString(JsonValue* item);
 ```
- - **returns** - **1** if provided **JsonValue** is a string else it returns **0**
- - **json** - **Json** object
+ - **returns** - **NULLABLE** - pointer to **JsonStringRange** if **JsonValue** is a string and **NULL** if it is not. 
  - **item** - **JsonValue** to parse
- - **buffer** - **NULLABLE** - pointer to memory location where array of chars will be placed(null-terminated)
- - **bufferLength** - size of **buffer** in bytes
- - **actualLength** - **NULLABLE** - pointer to memory location where actual size of string will be placed(including null-terminator)
+
+In general, string are represented in format of **JsonStringRange**:
+```c
+struct JsonStringRange {
+    size_t start;
+    size_t length; // not including null-terminator
+};
+```
+It represents piece of json source string.
+
+#### JsonStringRange
+This library provides several methods to interact with string ranges:
+
+##### Copy
+**JsonStringRange_copy()** copies piece of source string into provided buffer
+```c
+void JsonStringRange_copy(Json* json, JsonStringRange* range, char* buffer, size_t bufferSize);
+```
+ - **json** - **Json** object
+ - **range** - string range to copy
+ - **buffer** - pointer to memory locations where the string will be copied
+ - **bufferSize** - buffer size
+
+If **bufferSize** is insufficient the function will copy only piece of string range.
+
+##### Print
+**JsonStringRange_print()** prints string range into stdout.
+```c
+void JsonStringRange_print(Json* json, JsonStringRange* range);
+```
+ - **json** - **Json** object
+ - **range** - string range to copy
+
+##### Iterate
+**JsonStringIterator** structure allows string iteration
+```c
+#include <stdio.h>
+
+#define JSON_IMPLEMENTATION
+#include "Json.h"
+
+int main(void) {
+    Json_createStatic(json, "\"string\"");
+
+    Json_parse(json);
+
+    JsonValue* root = Json_getRoot(json);
+
+    JsonStringRange* str = Json_asString(root);
+
+    JsonStringIterator iterator;
+    JsonStringIterator_init(json, str, &iterator);
+
+    char ch;
+    while((ch = JsonStringIterator_next(&iterator))) {
+        putchar(ch);
+    }
+    putchar('\n');
+
+    return 0;
+}
+```
+**JsonStringIterator_init()** initiates iterator with provided **Json** and **JsonValue** and **JsonStringIterator_next()** just iterates each char of the string.
+
+### Array
+Use function **Json_asArray** to interpret **JsonValue** as array.
+```c
+int Json_asArray(JsonValue* item, size_t* length);
+```
+ - **returns** - **1** if provided **JsonValue** is an array else it returns **0**
+ - **item** - **JsonValue** to parse
+ - **length** - **NULLABLE** - pointer to memory location where array length will be placed
+
+### Object
+Use function **Json_asObject** to interpret **JsonValue** as object.
+```c
+int Json_asObject(JsonValue* item, size_t* size);
+```
+ - **returns** - **1** if provided **JsonValue** is an object else it returns **0**
+ - **item** - **JsonValue** to parse
+ - **length** - **NULLABLE** - pointer to memory location where number of object fields will be placed
+
+#### Properties
+Use **JsonObjectIterator** to iterate over object properties:
+```c
+#include <stdio.h>
+
+#define JSON_IMPLEMENTATION
+#include "Json.h"
+
+int main(void) {
+    Json_createStatic(
+        json,
+        "{"
+        "\"first\": 1,"
+        "\"second\": 2,"
+        "\"third\": 3"
+        "}",
+        20
+    );
+
+    Json_parse(json);
+
+    JsonValue* root = Json_getRoot(json);
+
+    JsonObjectIterator properties;
+    JsonObjectIterator_init(json, root, &properties);
+
+    JsonProperty property;
+    while(JsonObjectIterator_next(&properties, &property)) {
+        JsonStringRange_print(json, property.name);
+        
+        float value;
+        Json_asNumber(property.value, &value);
+
+        printf(": %.1f\n", value);
+    }
+
+    /* 
+    stdout:
+        third: 3.0
+        second: 2.0
+        first: 1.0
+    */
+
+    return 0;
+}
+```
+*As you can see, iterated properties are not in the same order as in the initial due to hashing limitations.*
+
+Use **JsonObjectIterator_init()** to initiate iterator with provided **Json** and **JsonValue** and then simply use **JsonObjectIterator_next()** to iterate over the object.
+**JsonObjectIterator_next()** uses **JsonProperty** structure with following definition:
+```c
+struct JsonProperty {
+    JsonStringRange* name;
+    JsonValue* value;
+};
+```
+It is just a pair of **key** and **value** on which you can use related to these structures methods: **JsonStringRange_copy()**, **Json_asNumber()** and e.t.c.

@@ -14,7 +14,6 @@ typedef struct Json {
 
 #define Json_createStatic(name, src, elementsNumber)\
     Json_internal_TableItem name##__buffer[elementsNumber];\
-    memset(name##__buffer, 0, elementsNumber * sizeof(Json_internal_TableItem));\
     Json_internal_Table name##__table = {\
         .maxSize = elementsNumber,\
         .size = 0,\
@@ -65,15 +64,14 @@ typedef struct JsonObjectIterator {
     size_t found;
 } JsonObjectIterator;
 int JsonObjectIterator_init(Json* json, JsonValue* obj, JsonObjectIterator* iterator);
-typedef struct JsonField {
-    JsonStringRange name;
+typedef struct JsonProperty {
+    JsonStringRange* name;
     JsonValue* value;
-} JsonField;
-int JsonObjectIterator_next(JsonObjectIterator* iterator, JsonField* field);
+} JsonProperty;
+int JsonObjectIterator_next(JsonObjectIterator* iterator, JsonProperty* property);
 int JsonObjectIterator_index(JsonObjectIterator* iterator);
 
-size_t JsonField_name(Json* json, JsonField* field, char* buffer, size_t bufferSize);
-
+void JsonStringRange_copy(Json* json, JsonStringRange* range, char* buffer, size_t bufferSize);
 void JsonStringRange_print(Json* json, JsonStringRange* range);
 
 typedef struct JsonStringIterator {
@@ -87,7 +85,7 @@ char JsonStringIterator_next(JsonStringIterator* iterator);
 
 int Json_asNumber(JsonValue* item, float* value);
 int Json_asBoolean(JsonValue* item, int* value);
-int Json_asString(Json* json, JsonValue* item, char* buffer, size_t bufferLength, size_t* actualLength);
+JsonStringRange* Json_asString(JsonValue* item);
 int Json_asArray(JsonValue* item, size_t* length);
 int Json_asObject(JsonValue* item, size_t* size);
 int Json_isNull(JsonValue* item);
