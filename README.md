@@ -411,7 +411,7 @@ int main(void) {
     return 0;
 }
 ```
-So here we are just specifying list of **selectors** and the passing it to **Json_chain()** to get exactly the same result as in the initial code example.
+So here we are just specifying list of **selectors** and then passing it to **Json_chain()** to get exactly the same result as in the initial code example.
 
 ### Json_chainM
 It is just a simplification macro for [Json_chain()](#json_chain)
