@@ -463,7 +463,7 @@ JsonValue* Json_chainVA(Json* json, JsonValue* item, ...);
  - **item** - item to traverse 
  - **VA_ARGS** - list of string selectors terminated with **NULL**
    This selectors has the following format:
-     - If the selector begins with "!+" then if will be interpreted as index
+     - If the selector begins with "!+" then it will be interpreted as index
      - Everything else will be interpreted as key
 
 Example:
