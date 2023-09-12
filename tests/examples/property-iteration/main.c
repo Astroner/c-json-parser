@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #define JSON_IMPLEMENTATION
-#include "Json.h"
+#include "../../../Json.h"
 
 int main(void) {
     Json_createStatic(

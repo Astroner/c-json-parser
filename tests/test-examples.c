@@ -19,7 +19,7 @@ int main(void) {
 
         chdir(de->d_name);
 
-        system("gcc -o ./run.gen main.c -I../../../");
+        system("gcc -o ./run.gen -Wall -Wextra -std=c99 -pedantic main.c");
 
         if(system("./run.gen > actual.gen.txt") < 0) {
             printf("Failed to execute test\n");

@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #define JSON_IMPLEMENTATION
-#include "Json.h"
+#include "../../../Json.h"
 
 int main(void) {
     Json_createStatic(json, "[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]", 20); // Creating Json object with macro
