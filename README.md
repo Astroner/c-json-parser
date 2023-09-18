@@ -4,11 +4,11 @@ This is simple C STB-like library for json parsing, that uses static memory.
 # Table of Content
  - [Usage](#usage)
  - [API Reference](#api-reference)
-     - [Creating new instance](#creating-new-instance-1)
+     - [Creating new instance](#creating-new-instance)
          - [Macros](#macros)
              - [Json_create](#json_create)
              - [Json_createStatic](#json_createstatic)
-         - [Functions](#functions-1)
+         - [Functions](#functions)
              - [Json_allocate](#json_allocate)
      - [Working with types](#working-with-types)
          - [Null](#null)
