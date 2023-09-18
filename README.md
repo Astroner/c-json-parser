@@ -139,7 +139,7 @@ int main(void) {
 ```
 
 #### Json_createStatic
-Does exactly what **Json_create** does, but adds **static** modifier for variable definitions
+Does exactly what **Json_create** does, but adds **static** modifier to variable definitions
 
 ### Functions
 #### Json_allocate
