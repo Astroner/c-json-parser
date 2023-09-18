@@ -1,14 +1,61 @@
 #include "json.h"
+
+#include <stdio.h>
+#include <stdarg.h>
+#include <stdlib.h>
+
 #include "logs.h"
 #include "hash-table-methods.h"
 #include "iterator.h"
 #include "parser.h"
 #include "utils.h"
 
+Json* Json_allocate(size_t elementsNumber) {
+    char* mem = (char*)malloc(
+        sizeof(Json)
+        + sizeof(int) * elementsNumber
+        + sizeof(int) * elementsNumber
+        + sizeof(Json_internal_TableItem) * elementsNumber 
+        + sizeof(Json_internal_Table)
+    );
 
-#include <stdio.h>
-#include <stdarg.h>
+    if(!mem) return NULL;
 
+    Json* json = (void*)mem;
+
+    char* busy = mem + sizeof(Json);
+    char* byIndex = busy + sizeof(int) * elementsNumber;
+    char* buffer = byIndex + sizeof(int) * elementsNumber;
+    Json_internal_Table* table = (void*)(buffer + sizeof(Json_internal_TableItem) * elementsNumber);
+
+
+    table->busy = (void*)busy;
+    table->byIndex = (void*)byIndex;
+    table->buffer = (void*)buffer;
+    table->size = 0;
+    table->maxSize = elementsNumber;
+
+    json->parsed = 0;
+    json->table = table;
+
+
+    return json;
+}
+
+void Json_reset(Json* json) {
+    json->parsed = 0;
+    
+    Json_internal_Table_reset(json->table);
+}
+
+void Json_setSource(Json* json, char* src) {
+    json->parsed = 0;
+    json->table->stringBuffer = src;
+}
+
+void Json_free(Json* json) {
+    free(json);
+}
 
 int Json_parse(Json* json) {
     LOGS_SCOPE();
@@ -34,17 +81,6 @@ int Json_parse(Json* json) {
     return 0;
 }
 
-void Json_reset(Json* json) {
-    json->parsed = 0;
-    json->table->size = 0;
-    memset(json->table->buffer, 0, json->table->maxSize * sizeof(json->table->buffer[0]));
-}
-
-void Json_setSource(Json* json, char* src) {
-    Json_reset(json);
-    json->table->stringBuffer = src;
-}
-
 JsonValue* Json_getRoot(Json* json) {
     if(!json->parsed) return NULL;
 
@@ -52,7 +88,7 @@ JsonValue* Json_getRoot(Json* json) {
 }
 
 int Json_asNumber(JsonValue* item, float* result) {
-    if(item->type != Json_internal_TableValueTypeNumber) return 0;
+    if(!item || item->type != Json_internal_TableValueTypeNumber) return 0;
 
     if(result) *result = item->value.number;
 
@@ -74,7 +110,7 @@ JsonStringRange* Json_asString(JsonValue* item) {
 }
 
 int Json_asArray(JsonValue* item, size_t* length) {
-    if(item->type != Json_internal_TableValueTypeArray) return 0;
+    if(!item || item->type != Json_internal_TableValueTypeArray) return 0;
     if(length) {
         *length = item->value.array.size;
     }
@@ -83,7 +119,7 @@ int Json_asArray(JsonValue* item, size_t* length) {
 }
 
 int Json_asObject(JsonValue* item, size_t* size) {
-    if(item->type != Json_internal_TableValueTypeObject) return 0;
+    if(!item || item->type != Json_internal_TableValueTypeObject) return 0;
     if(size) {
         *size = item->value.object.size;
     }
@@ -92,11 +128,11 @@ int Json_asObject(JsonValue* item, size_t* size) {
 }
 
 int Json_isNull(JsonValue* item) {
-    return item->type == Json_internal_TableValueTypeNull;
+    return item && item->type == Json_internal_TableValueTypeNull;
 }
 
 JsonValue* Json_getKey(Json* json, JsonValue* item, char* key) {
-    if(!json->parsed) return NULL;
+    if(!json->parsed || !item) return NULL;
 
     if(item->type != Json_internal_TableValueTypeObject) return NULL;
     Json_internal_TableItem* result = Json_internal_Table_getByKey(json->table, key, item->value.object.contextIndex);
@@ -107,7 +143,7 @@ JsonValue* Json_getKey(Json* json, JsonValue* item, char* key) {
 }
 
 JsonValue* Json_getIndex(Json* json, JsonValue* item, size_t index) {
-    if(!json->parsed) return NULL;
+    if(!json->parsed || !item) return NULL;
 
     if(item->type != Json_internal_TableValueTypeArray) return NULL;
 
@@ -308,7 +344,7 @@ int JsonObjectIterator_next(JsonObjectIterator* iterator, JsonProperty* property
 
     for(size_t i = iterator->index; i < iterator->json->table->maxSize; i++) {
         if(
-            !iterator->json->table->buffer[i].isBusy ||
+            !iterator->json->table->busy[i] ||
             iterator->json->table->buffer[i].contextIndex != iterator->ctx
         ) continue;
 

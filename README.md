@@ -34,7 +34,9 @@ This is simple C STB-like library for json parsing, that uses static memory.
 #include "Json.h"
 
 int main(void) {
-    Json_createStatic(json, "[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]", 20); // Creating Json object with macro
+    Json_create(json, 20); // Creating Json object with macro
+
+    Json_setSource(json, "[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]"); // setting string source
 
     if(Json_parse(json) < 0) { // Parsing values
         printf("Failed to parse JSON");
@@ -100,6 +102,71 @@ Overall, basic usage algorithm looks like:
  - Use **Json_asNumber()**, **Json_asString()**, **Json_asArray()** and e.t.c. to get values
 
 # API Reference
+## Creating new instance
+This section describes functions and macros for **Json** structure initialization
+
+### Macros
+#### Json_create
+This macro expands to definition of buffers and structures for **Json** structure
+```c
+#define Json_create(name, elementsNumber)
+```
+ - **name** - name of the variable to define to store pointer to **Json** structure
+ - **elementsNumber** - maximum number of referenceable elements to store
+
+Since it is just a macro it can be used both in global space and in function scope:
+```c
+#define JSON_IMPLEMENTATION
+#include "Json.h"
+
+Json_create(json, 20)
+
+int main(void) {
+    Json_setSource(json, "[22]");
+
+    Json_parse(json);
+
+    Json_print(json, Json_getRoot(json));
+
+    return 0;
+}
+```
+
+#### Json_createStatic
+Does exactly what **Json_create** does, but adds **static** modifier for variable definitions
+
+### Functions
+#### Json_allocate
+This function allocates **Json** using **malloc** for provided **elementsNumber** and returns pointer to it.
+```c
+Json* Json_allocate(size_t elementsNumber);
+```
+ - **returns** - **NULLABLE** - pointer to allocated **Json** structure or **NULL** if **malloc** failed
+ - **elementsNumber** - maximum number of referenceable elements to store
+
+Use **Json_free** to free **Json** structure
+```c
+void Json_free(Json* json);
+```
+```c
+#define JSON_IMPLEMENTATION
+#include "Json.h"
+
+int main(void) {
+    Json* json = Json_allocate(20);
+
+    Json_setSource(json, "true");
+
+    Json_parse(json);
+
+    Json_print(json, Json_getRoot(json));
+
+    Json_free(json);
+
+    return 0;
+}
+```
+
 ## Working with types
 Here is the list of functions to work with data types.
 
@@ -178,7 +245,9 @@ void JsonStringRange_print(Json* json, JsonStringRange* range);
 #include "Json.h"
 
 int main(void) {
-    Json_createStatic(json, "\"string\"");
+    Json_create(json);
+
+    Json_setSource(json, "\"string\"");
 
     Json_parse(json);
 
@@ -194,6 +263,11 @@ int main(void) {
         putchar(ch);
     }
     putchar('\n');
+
+    /* 
+    stdout:
+    string
+    */
 
     return 0;
 }
@@ -247,14 +321,15 @@ Use **JsonObjectIterator** to iterate over object properties:
 #include "Json.h"
 
 int main(void) {
-    Json_createStatic(
+    Json_create(json, 20);
+
+    Json_setSource(
         json,
         "{"
-        "\"first\": 1,"
-        "\"second\": 2,"
-        "\"third\": 3"
-        "}",
-        20
+            "\"first\": 1,"
+            "\"second\": 2,"
+            "\"third\": 3"
+        "}"
     );
 
     Json_parse(json);
@@ -319,7 +394,10 @@ And you just want to get this **"Train"** string. To do so with basic traversing
 
 int main(void) {
     char* src = readFile("example.json");
-    Json_createStatic(json, src, 5);
+
+    Json_create(json, 5);
+
+    Json_setSource(json, src);
 
     Json_parse(json);
 
@@ -389,7 +467,10 @@ Basic usage example:
 
 int main(void) {
     char* src = readFile("example.json");
-    Json_createStatic(json, src, 5);
+
+    Json_create(json, 5);
+
+    Json_setSource(json, src);
 
     Json_parse(json);
 
@@ -432,7 +513,10 @@ Example:
 
 int main(void) {
     char* src = readFile("example.json");
-    Json_createStatic(json, src, 5);
+
+    Json_create(json, 5);
+
+    Json_setSource(json, src);
 
     Json_parse(json);
 
@@ -475,7 +559,10 @@ Example:
 
 int main(void) {
     char* src = readFile("example.json");
-    Json_createStatic(json, src, 5);
+
+    Json_create(json, 5);
+
+    Json_setSource(json, src);
 
     Json_parse(json);
 

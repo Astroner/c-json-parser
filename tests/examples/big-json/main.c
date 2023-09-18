@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #define JSON_IMPLEMENTATION
 #include "../../../Json.h"
@@ -31,26 +32,13 @@ char* readFile(char* path) {
 int main(void) {
     char* src = readFile("example.json");
 
-    Json_create(json, 5);
+    Json_create(json, 200);
 
     Json_setSource(json, src);
 
-    Json_parse(json);
+    assert(Json_parse(json) >= 0);
 
-    JsonValue* root = Json_getRoot(json);
-
-    JsonSelector selectors[] = {
-        { .type = JsonKey, .q.key = "entities" },
-        { .type = JsonIndex, .q.index = 0 },
-        { .type = JsonKey, .q.key = "name" },
-        { .type = JsonKey, .q.key = "text" },
-    };
-
-    JsonValue* string = Json_chain(json, root, selectors, sizeof(selectors) / sizeof(selectors[0]));
-
-    Json_print(json, string); // stdout: "Train"
-
-    free(src);
+    Json_print(json, Json_getRoot(json));
 
     return 0;
 }

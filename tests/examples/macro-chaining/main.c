@@ -30,7 +30,10 @@ char* readFile(char* path) {
 
 int main(void) {
     char* src = readFile("example.json");
-    Json_createStatic(json, src, 5);
+
+    Json_create(json, 5);
+
+    Json_setSource(json, src);
 
     Json_parse(json);
 
@@ -43,7 +46,7 @@ int main(void) {
         { .type = JsonKey, .q.key = "text" }
     );
 
-    Json_print(json, string);
+    Json_print(json, string); // stdout: "Train"
 
     free(src);
 

@@ -3,9 +3,15 @@
 #include <dirent.h>
 #include <unistd.h>
 
-int main(void) {
+#if !defined(COMPILER)
+    #define COMPILER "gcc"
+#endif
+
+int main(int argc, char** argv) {
     printf("\nTesting examples:\n");
-    
+
+    printf("Compiler: "COMPILER"\n\n");
+
     chdir("tests/examples");
 
     DIR* dir = opendir(".");
@@ -15,11 +21,11 @@ int main(void) {
     while((de = readdir(dir))) {
         if(de->d_type != DT_DIR || de->d_namlen < 3) continue;
 
-        printf("%s: ", de->d_name);
+        printf("%s ... ", de->d_name);
 
         chdir(de->d_name);
 
-        system("gcc -o ./run.gen -Wall -Wextra -std=c99 -pedantic main.c");
+        system(COMPILER" -o ./run.gen -Wall -Wextra -std=c99 -pedantic main.c");
 
         if(system("./run.gen > actual.gen.txt") < 0) {
             printf("Failed to execute test\n");
@@ -57,7 +63,7 @@ int main(void) {
 
         chdir("..");
 
-        printf("Done\n");
+        printf("DONE\n");
     }
 
     closedir(dir);

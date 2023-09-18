@@ -17,24 +17,29 @@ $(OBJECTS): %.o: %.c
 	$(CC) -o $@ -c -Wall -Wextra -std=c99 -pedantic -Iheaders $(CFLAGS) $<
 
 $(LIB_NAME): $(wildcard headers/*.h) $(wildcard src/*.c)
-	cat headers/hash-table.h > $(LIB_NAME)
+	echo "#include <stddef.h>" > $(LIB_NAME)
+	tail -n +2 headers/hash-table.h >> $(LIB_NAME)
 	echo "\n" >> $(LIB_NAME)
-	tail -n +3 headers/json.h >> $(LIB_NAME)
+	tail -n +2 headers/json.h >> $(LIB_NAME)
 
-	echo "#if defined(JSON_IMPLEMENTATION)\n" >> $(LIB_NAME)
+	echo "\n#if defined(JSON_IMPLEMENTATION)\n" >> $(LIB_NAME)
+	echo "#include <string.h>" >> $(LIB_NAME)
+	echo "#include <stdio.h>" >> $(LIB_NAME)
+	echo "#include <stdarg.h>" >> $(LIB_NAME)
+	echo "#include <stdlib.h>" >> $(LIB_NAME)
 
-	tail -n +3 src/hash-table.c >> $(LIB_NAME)
-	echo "\n" >> $(LIB_NAME)
-
-	cat headers/utils.h >> $(LIB_NAME)
-	echo "\n" >> $(LIB_NAME)
-	tail -n +2 src/utils.c >> $(LIB_NAME)
-	echo "\n" >> $(LIB_NAME)
-
-	cat headers/logs.h >> $(LIB_NAME)
+	tail -n +6 src/hash-table.c >> $(LIB_NAME)
 	echo "\n" >> $(LIB_NAME)
 
-	cat headers/iterator.h >> $(LIB_NAME)
+	tail -n +2 headers/utils.h >> $(LIB_NAME)
+	echo "\n" >> $(LIB_NAME)
+	tail -n +4 src/utils.c >> $(LIB_NAME)
+	echo "\n" >> $(LIB_NAME)
+
+	tail -n +2 headers/logs.h >> $(LIB_NAME)
+	echo "\n" >> $(LIB_NAME)
+
+	tail -n +2 headers/iterator.h >> $(LIB_NAME)
 	echo "\n" >> $(LIB_NAME)
 	tail -n +4 src/iterator.c >> $(LIB_NAME)
 	echo "\n" >> $(LIB_NAME)
@@ -44,7 +49,7 @@ $(LIB_NAME): $(wildcard headers/*.h) $(wildcard src/*.c)
 	tail -n +5 src/parser.c >> $(LIB_NAME)
 	echo "\n" >> $(LIB_NAME)
 
-	tail -n +7 src/json.c >> $(LIB_NAME)
+	tail -n +12 src/json.c >> $(LIB_NAME)
 	echo "\n" >> $(LIB_NAME)
 
 	echo "#endif // JSON_IMPLEMENTATION\n" >> $(LIB_NAME)
@@ -55,13 +60,13 @@ lib: $(LIB_NAME)
 
 .PHONY: test-units
 test-units: $(LIB_NAME) tests/test-units.c
-	gcc -o ./test-units -Wall -Wextra -std=c99 -pedantic ./tests/test-units.c
+	$(CC) -o ./test-units -Wall -Wextra -std=c99 -pedantic ./tests/test-units.c
 	./test-units
 	rm ./test-units
 
 .PHONY: test-examples
 test-examples: $(LIB_NAME)
-	gcc -o ./test-examples tests/test-examples.c
+	$(CC) -o ./test-examples -D COMPILER='"$(CC)"' tests/test-examples.c
 	./test-examples
 	rm ./test-examples
 

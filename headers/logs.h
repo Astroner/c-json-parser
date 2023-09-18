@@ -1,7 +1,9 @@
+#include <stdio.h>
+
+
 #if !defined(LOGS_H)
 #define LOGS_H
 
-#include <stdio.h>
 
 #if defined(JSON_DO_LOGS)
     #define LOGS_SCOPE(name)\

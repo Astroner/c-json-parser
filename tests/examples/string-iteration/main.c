@@ -4,7 +4,9 @@
 #include "../../../Json.h"
 
 int main(void) {
-    Json_createStatic(json, "\"string\"", 20);
+    Json_create(json, 1);
+
+    Json_setSource(json, "\"string\"");
 
     Json_parse(json);
 
@@ -20,6 +22,11 @@ int main(void) {
         putchar(ch);
     }
     putchar('\n');
+
+    /* 
+    stdout:
+    string
+    */
 
     return 0;
 }

@@ -1,7 +1,5 @@
-
 #include "hash-table.h"
 
-#include <string.h>
 
 #if !defined(PARSE_H)
 #define PARSE_H
@@ -12,19 +10,43 @@ typedef struct Json {
     Json_internal_Table* table;
 } Json;
 
-#define Json_createStatic(name, src, elementsNumber)\
+#define Json_create(name, elementsNumber)\
     Json_internal_TableItem name##__buffer[elementsNumber];\
+    int name##__busy[elementsNumber];\
+    int name##__byIndex[elementsNumber];\
     Json_internal_Table name##__table = {\
         .maxSize = elementsNumber,\
         .size = 0,\
         .buffer = name##__buffer,\
-        .stringBuffer = src\
+        .busy = name##__busy,\
+        .byIndex = name##__byIndex,\
     };\
     Json name##__data = {\
         .parsed = 0,\
         .table = &name##__table\
     };\
     Json* name = &name##__data;\
+
+#define Json_createStatic(name, elementsNumber)\
+    static Json_internal_TableItem name##__buffer[elementsNumber];\
+    static int name##__busy[elementsNumber];\
+    static int name##__byIndex[elementsNumber];\
+    static Json_internal_Table name##__table = {\
+        .maxSize = elementsNumber,\
+        .size = 0,\
+        .buffer = name##__buffer,\
+        .busy = name##__busy,\
+        .byIndex = name##__byIndex,\
+    };\
+    static Json name##__data = {\
+        .parsed = 0,\
+        .table = &name##__table\
+    };\
+    static Json* name = &name##__data;\
+
+
+Json* Json_allocate(size_t elementsNumber);
+void Json_free(Json* json);
 
 int Json_parse(Json* json);
 

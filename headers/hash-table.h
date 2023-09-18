@@ -1,7 +1,9 @@
+#include <stddef.h>
+
+
 #if !defined(HASH_TABLE_H)
 #define HASH_TABLE_H
 
-#include <stddef.h>
 
 typedef enum Json_internal_TableValueType {
     Json_internal_TableValueTypeString,
@@ -39,18 +41,18 @@ typedef struct JsonValue {
 } JsonValue;
 
 typedef struct Json_internal_TableItem {
-    int isBusy;
     size_t contextIndex;
 
     JsonStringRange name;
 
-    int byIndex;
     size_t index;
 
     JsonValue typedValue;
 } Json_internal_TableItem;
 
 typedef struct Json_internal_Table {
+    int* busy;
+    int* byIndex;
     size_t maxSize;
     size_t size;
 

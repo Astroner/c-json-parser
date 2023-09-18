@@ -4,7 +4,9 @@
 #include "json.h"
 
 int main(void) {
-    Json_createStatic(json, "{ \"a\": 22, \"n\": 1 }", 20); // Creating JSON object with macro
+    Json_create(json, 20); // Creating JSON object with macro
+
+    Json_setSource(json, "{ \"a\": 22, \"n\": 1 }");
 
     if(Json_parse(json) < 0) { // Parsing values
         printf("Failed to parse JSON");

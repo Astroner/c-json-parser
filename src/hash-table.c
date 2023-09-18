@@ -1,9 +1,9 @@
 #include "hash-table.h"
 #include "hash-table-methods.h"
 
-
 #include <string.h>
 #include <stdio.h>
+
 
 static unsigned long Json_internal_hashChars(char* str, size_t contextIndex) {
     unsigned long hash = 5381;
@@ -55,8 +55,9 @@ static unsigned long Json_internal_hashKey(char* strBuffer, size_t nameStart, si
 
 Json_internal_TableItem* Json_internal_Table_set(Json_internal_Table* table, Json_internal_Destination* dest) {
     if(dest->isRoot) {
-        table->buffer->isBusy = 1;
+        table->busy[0] = 1;
 
+        table->size++;
         table->buffer->name.start = dest->name.start;
         table->buffer->name.length = dest->name.length;
         table->buffer->contextIndex = dest->ctx;
@@ -77,7 +78,7 @@ Json_internal_TableItem* Json_internal_Table_set(Json_internal_Table* table, Jso
     size_t startIndex = hash % table->maxSize;
 
     size_t index = startIndex;
-    while(table->buffer[index].isBusy) {
+    while(table->busy[index]) {
         index++;
         if(index == table->maxSize) {
             index = 0;
@@ -87,13 +88,13 @@ Json_internal_TableItem* Json_internal_Table_set(Json_internal_Table* table, Jso
         }
     }
 
-    table->buffer[index].isBusy = 1;
+    table->busy[index] = 1;
 
     table->buffer[index].contextIndex = dest->ctx;
 
     if(dest->isIndex) {
         table->buffer[index].index = dest->index;
-        table->buffer[index].byIndex = 1;
+        table->byIndex[index] = 1;
     } else {
         table->buffer[index].name.start = dest->name.start;
         table->buffer[index].name.length = dest->name.length;
@@ -106,8 +107,7 @@ Json_internal_TableItem* Json_internal_Table_set(Json_internal_Table* table, Jso
 
 void Json_internal_Table_print(Json_internal_Table* table) {
     for(size_t i = 0; i < table->maxSize; i++) {
-        Json_internal_TableItem* current = table->buffer + i;
-        printf("%zu) %s\n", i, current->isBusy ? "BUSY" : "FREE");
+        printf("%zu) %s\n", i, table->busy[i] ? "BUSY" : "FREE");
     }
 }
 
@@ -118,13 +118,17 @@ Json_internal_TableItem* Json_internal_Table_getByKey(Json_internal_Table* table
     
     size_t index = startIndex;
     Json_internal_TableItem* current = table->buffer + index;
+    while(1) {
+        if(!table->busy[index]) return NULL;
 
-    while(
-        !current->isBusy 
-        || current->byIndex
-        || current->contextIndex != contextIndex 
-        || strncmp(key, table->stringBuffer + current->name.start, current->name.length) != 0
-    ) {
+        if(
+            !table->byIndex[index]
+            && current->contextIndex == contextIndex 
+            && strncmp(key, table->stringBuffer + current->name.start, current->name.length) == 0
+        ) {
+            break;
+        }
+
         index++;
         if(index == table->maxSize) {
             index = 0;
@@ -147,12 +151,18 @@ Json_internal_TableItem* Json_internal_Table_getByIndex(Json_internal_Table* tab
     
     Json_internal_TableItem* current = table->buffer + bufferIndex;
 
-    while(
-        !current->isBusy 
-        || !current->byIndex
-        || current->contextIndex != contextIndex 
-        || current->index != index
-    ) {
+    while(1) {
+        if(!table->busy[bufferIndex]) return NULL;
+
+        if(
+            table->byIndex[bufferIndex] 
+            && current->contextIndex == contextIndex 
+            && current->index == index
+        ) {
+            break;
+        }
+
+
         bufferIndex++;
         if(bufferIndex == table->maxSize) {
             bufferIndex = 0;
@@ -164,4 +174,11 @@ Json_internal_TableItem* Json_internal_Table_getByIndex(Json_internal_Table* tab
     }
     
     return current;
+}
+
+void Json_internal_Table_reset(Json_internal_Table* table) {
+    table->size = 0;
+    
+    memset(table->busy, 0, sizeof(int) * table->maxSize);
+    memset(table->byIndex, 0, sizeof(int) * table->maxSize);
 }

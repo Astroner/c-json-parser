@@ -30,7 +30,10 @@ char* readFile(char* path) {
 
 int main(void) {
     char* src = readFile("example.json");
-    Json_createStatic(json, src, 5);
+
+    Json_create(json, 5);
+
+    Json_setSource(json, src);
 
     Json_parse(json);
 

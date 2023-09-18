@@ -1,7 +1,9 @@
+#include <stddef.h>
+
+
 #if !defined(HASH_TABLE_H)
 #define HASH_TABLE_H
 
-#include <stddef.h>
 
 typedef enum Json_internal_TableValueType {
     Json_internal_TableValueTypeString,
@@ -39,18 +41,18 @@ typedef struct JsonValue {
 } JsonValue;
 
 typedef struct Json_internal_TableItem {
-    int isBusy;
     size_t contextIndex;
 
     JsonStringRange name;
 
-    int byIndex;
     size_t index;
 
     JsonValue typedValue;
 } Json_internal_TableItem;
 
 typedef struct Json_internal_Table {
+    int* busy;
+    int* byIndex;
     size_t maxSize;
     size_t size;
 
@@ -72,7 +74,6 @@ typedef struct Json_internal_Destination {
 
 
 
-#include <string.h>
 
 #if !defined(PARSE_H)
 #define PARSE_H
@@ -83,19 +84,43 @@ typedef struct Json {
     Json_internal_Table* table;
 } Json;
 
-#define Json_createStatic(name, src, elementsNumber)\
+#define Json_create(name, elementsNumber)\
     Json_internal_TableItem name##__buffer[elementsNumber];\
+    int name##__busy[elementsNumber];\
+    int name##__byIndex[elementsNumber];\
     Json_internal_Table name##__table = {\
         .maxSize = elementsNumber,\
         .size = 0,\
         .buffer = name##__buffer,\
-        .stringBuffer = src\
+        .busy = name##__busy,\
+        .byIndex = name##__byIndex,\
     };\
     Json name##__data = {\
         .parsed = 0,\
         .table = &name##__table\
     };\
     Json* name = &name##__data;\
+
+#define Json_createStatic(name, elementsNumber)\
+    static Json_internal_TableItem name##__buffer[elementsNumber];\
+    static int name##__busy[elementsNumber];\
+    static int name##__byIndex[elementsNumber];\
+    static Json_internal_Table name##__table = {\
+        .maxSize = elementsNumber,\
+        .size = 0,\
+        .buffer = name##__buffer,\
+        .busy = name##__busy,\
+        .byIndex = name##__byIndex,\
+    };\
+    static Json name##__data = {\
+        .parsed = 0,\
+        .table = &name##__table\
+    };\
+    static Json* name = &name##__data;\
+
+
+Json* Json_allocate(size_t elementsNumber);
+void Json_free(Json* json);
 
 int Json_parse(Json* json);
 
@@ -165,12 +190,14 @@ void Json_print(Json* json, JsonValue* root);
 void Json_printType(JsonValue* root);
 
 #endif // PARSE_H
+
 #if defined(JSON_IMPLEMENTATION)
-
-
 
 #include <string.h>
 #include <stdio.h>
+#include <stdarg.h>
+#include <stdlib.h>
+
 
 static unsigned long Json_internal_hashChars(char* str, size_t contextIndex) {
     unsigned long hash = 5381;
@@ -222,8 +249,9 @@ static unsigned long Json_internal_hashKey(char* strBuffer, size_t nameStart, si
 
 Json_internal_TableItem* Json_internal_Table_set(Json_internal_Table* table, Json_internal_Destination* dest) {
     if(dest->isRoot) {
-        table->buffer->isBusy = 1;
+        table->busy[0] = 1;
 
+        table->size++;
         table->buffer->name.start = dest->name.start;
         table->buffer->name.length = dest->name.length;
         table->buffer->contextIndex = dest->ctx;
@@ -244,7 +272,7 @@ Json_internal_TableItem* Json_internal_Table_set(Json_internal_Table* table, Jso
     size_t startIndex = hash % table->maxSize;
 
     size_t index = startIndex;
-    while(table->buffer[index].isBusy) {
+    while(table->busy[index]) {
         index++;
         if(index == table->maxSize) {
             index = 0;
@@ -254,13 +282,13 @@ Json_internal_TableItem* Json_internal_Table_set(Json_internal_Table* table, Jso
         }
     }
 
-    table->buffer[index].isBusy = 1;
+    table->busy[index] = 1;
 
     table->buffer[index].contextIndex = dest->ctx;
 
     if(dest->isIndex) {
         table->buffer[index].index = dest->index;
-        table->buffer[index].byIndex = 1;
+        table->byIndex[index] = 1;
     } else {
         table->buffer[index].name.start = dest->name.start;
         table->buffer[index].name.length = dest->name.length;
@@ -273,8 +301,7 @@ Json_internal_TableItem* Json_internal_Table_set(Json_internal_Table* table, Jso
 
 void Json_internal_Table_print(Json_internal_Table* table) {
     for(size_t i = 0; i < table->maxSize; i++) {
-        Json_internal_TableItem* current = table->buffer + i;
-        printf("%zu) %s\n", i, current->isBusy ? "BUSY" : "FREE");
+        printf("%zu) %s\n", i, table->busy[i] ? "BUSY" : "FREE");
     }
 }
 
@@ -285,13 +312,17 @@ Json_internal_TableItem* Json_internal_Table_getByKey(Json_internal_Table* table
     
     size_t index = startIndex;
     Json_internal_TableItem* current = table->buffer + index;
+    while(1) {
+        if(!table->busy[index]) return NULL;
 
-    while(
-        !current->isBusy 
-        || current->byIndex
-        || current->contextIndex != contextIndex 
-        || strncmp(key, table->stringBuffer + current->name.start, current->name.length) != 0
-    ) {
+        if(
+            !table->byIndex[index]
+            && current->contextIndex == contextIndex 
+            && strncmp(key, table->stringBuffer + current->name.start, current->name.length) == 0
+        ) {
+            break;
+        }
+
         index++;
         if(index == table->maxSize) {
             index = 0;
@@ -314,12 +345,18 @@ Json_internal_TableItem* Json_internal_Table_getByIndex(Json_internal_Table* tab
     
     Json_internal_TableItem* current = table->buffer + bufferIndex;
 
-    while(
-        !current->isBusy 
-        || !current->byIndex
-        || current->contextIndex != contextIndex 
-        || current->index != index
-    ) {
+    while(1) {
+        if(!table->busy[bufferIndex]) return NULL;
+
+        if(
+            table->byIndex[bufferIndex] 
+            && current->contextIndex == contextIndex 
+            && current->index == index
+        ) {
+            break;
+        }
+
+
         bufferIndex++;
         if(bufferIndex == table->maxSize) {
             bufferIndex = 0;
@@ -333,7 +370,14 @@ Json_internal_TableItem* Json_internal_Table_getByIndex(Json_internal_Table* tab
     return current;
 }
 
-#include <stddef.h>
+void Json_internal_Table_reset(Json_internal_Table* table) {
+    table->size = 0;
+    
+    memset(table->busy, 0, sizeof(int) * table->maxSize);
+    memset(table->byIndex, 0, sizeof(int) * table->maxSize);
+}
+
+
 
 #if !defined(UTILS_H)
 #define UTILS_H
@@ -348,18 +392,17 @@ void Json_internal_printRange(char* str, size_t start, size_t length);
 
 
 
-#include <stdio.h>
-
 void Json_internal_printRange(char* str, size_t start, size_t length) {
     for(size_t i = start; i < start + length; i++) {
         putchar(str[i]);
     }
 }
 
+
+
 #if !defined(LOGS_H)
 #define LOGS_H
 
-#include <stdio.h>
 
 #if defined(JSON_DO_LOGS)
     #define LOGS_SCOPE(name)\
@@ -460,7 +503,6 @@ void Json_internal_printRange(char* str, size_t start, size_t length) {
 #endif // LOGS_H
 
 
-#include <stddef.h>
 
 
 #if !defined(ITERATOR_H)
@@ -969,10 +1011,52 @@ Json_internal_ParsingStatus Json_internal_parseValue(Json_internal_Iterator* ite
 }
 
 
+Json* Json_allocate(size_t elementsNumber) {
+    char* mem = (char*)malloc(
+        sizeof(Json)
+        + sizeof(int) * elementsNumber
+        + sizeof(int) * elementsNumber
+        + sizeof(Json_internal_TableItem) * elementsNumber 
+        + sizeof(Json_internal_Table)
+    );
 
-#include <stdio.h>
-#include <stdarg.h>
+    if(!mem) return NULL;
 
+    Json* json = (void*)mem;
+
+    char* busy = mem + sizeof(Json);
+    char* byIndex = busy + sizeof(int) * elementsNumber;
+    char* buffer = byIndex + sizeof(int) * elementsNumber;
+    Json_internal_Table* table = (void*)(buffer + sizeof(Json_internal_TableItem) * elementsNumber);
+
+
+    table->busy = (void*)busy;
+    table->byIndex = (void*)byIndex;
+    table->buffer = (void*)buffer;
+    table->size = 0;
+    table->maxSize = elementsNumber;
+
+    json->parsed = 0;
+    json->table = table;
+
+
+    return json;
+}
+
+void Json_reset(Json* json) {
+    json->parsed = 0;
+    
+    Json_internal_Table_reset(json->table);
+}
+
+void Json_setSource(Json* json, char* src) {
+    json->parsed = 0;
+    json->table->stringBuffer = src;
+}
+
+void Json_free(Json* json) {
+    free(json);
+}
 
 int Json_parse(Json* json) {
     LOGS_SCOPE();
@@ -998,17 +1082,6 @@ int Json_parse(Json* json) {
     return 0;
 }
 
-void Json_reset(Json* json) {
-    json->parsed = 0;
-    json->table->size = 0;
-    memset(json->table->buffer, 0, json->table->maxSize * sizeof(json->table->buffer[0]));
-}
-
-void Json_setSource(Json* json, char* src) {
-    Json_reset(json);
-    json->table->stringBuffer = src;
-}
-
 JsonValue* Json_getRoot(Json* json) {
     if(!json->parsed) return NULL;
 
@@ -1016,7 +1089,7 @@ JsonValue* Json_getRoot(Json* json) {
 }
 
 int Json_asNumber(JsonValue* item, float* result) {
-    if(item->type != Json_internal_TableValueTypeNumber) return 0;
+    if(!item || item->type != Json_internal_TableValueTypeNumber) return 0;
 
     if(result) *result = item->value.number;
 
@@ -1038,7 +1111,7 @@ JsonStringRange* Json_asString(JsonValue* item) {
 }
 
 int Json_asArray(JsonValue* item, size_t* length) {
-    if(item->type != Json_internal_TableValueTypeArray) return 0;
+    if(!item || item->type != Json_internal_TableValueTypeArray) return 0;
     if(length) {
         *length = item->value.array.size;
     }
@@ -1047,7 +1120,7 @@ int Json_asArray(JsonValue* item, size_t* length) {
 }
 
 int Json_asObject(JsonValue* item, size_t* size) {
-    if(item->type != Json_internal_TableValueTypeObject) return 0;
+    if(!item || item->type != Json_internal_TableValueTypeObject) return 0;
     if(size) {
         *size = item->value.object.size;
     }
@@ -1056,11 +1129,11 @@ int Json_asObject(JsonValue* item, size_t* size) {
 }
 
 int Json_isNull(JsonValue* item) {
-    return item->type == Json_internal_TableValueTypeNull;
+    return item && item->type == Json_internal_TableValueTypeNull;
 }
 
 JsonValue* Json_getKey(Json* json, JsonValue* item, char* key) {
-    if(!json->parsed) return NULL;
+    if(!json->parsed || !item) return NULL;
 
     if(item->type != Json_internal_TableValueTypeObject) return NULL;
     Json_internal_TableItem* result = Json_internal_Table_getByKey(json->table, key, item->value.object.contextIndex);
@@ -1071,7 +1144,7 @@ JsonValue* Json_getKey(Json* json, JsonValue* item, char* key) {
 }
 
 JsonValue* Json_getIndex(Json* json, JsonValue* item, size_t index) {
-    if(!json->parsed) return NULL;
+    if(!json->parsed || !item) return NULL;
 
     if(item->type != Json_internal_TableValueTypeArray) return NULL;
 
@@ -1272,7 +1345,7 @@ int JsonObjectIterator_next(JsonObjectIterator* iterator, JsonProperty* property
 
     for(size_t i = iterator->index; i < iterator->json->table->maxSize; i++) {
         if(
-            !iterator->json->table->buffer[i].isBusy ||
+            !iterator->json->table->busy[i] ||
             iterator->json->table->buffer[i].contextIndex != iterator->ctx
         ) continue;
 

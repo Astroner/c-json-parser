@@ -4,14 +4,15 @@
 #include "../../../Json.h"
 
 int main(void) {
-    Json_createStatic(
+    Json_create(json, 20);
+
+    Json_setSource(
         json,
         "{"
-        "\"first\": 1,"
-        "\"second\": 2,"
-        "\"third\": 3"
-        "}",
-        20
+            "\"first\": 1,"
+            "\"second\": 2,"
+            "\"third\": 3"
+        "}"
     );
 
     Json_parse(json);
