@@ -94,6 +94,7 @@ typedef struct Json {
         .buffer = name##__buffer,\
         .busy = name##__busy,\
         .byIndex = name##__byIndex,\
+        .stringBuffer = NULL,\
     };\
     Json name##__data = {\
         .parsed = 0,\
@@ -111,6 +112,7 @@ typedef struct Json {
         .buffer = name##__buffer,\
         .busy = name##__busy,\
         .byIndex = name##__byIndex,\
+        .stringBuffer = NULL,\
     };\
     static Json name##__data = {\
         .parsed = 0,\
@@ -1035,6 +1037,7 @@ Json* Json_allocate(size_t elementsNumber) {
     table->buffer = (void*)buffer;
     table->size = 0;
     table->maxSize = elementsNumber;
+    table->stringBuffer = NULL;
 
     json->parsed = 0;
     json->table = table;

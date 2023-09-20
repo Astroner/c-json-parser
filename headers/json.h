@@ -20,6 +20,7 @@ typedef struct Json {
         .buffer = name##__buffer,\
         .busy = name##__busy,\
         .byIndex = name##__byIndex,\
+        .stringBuffer = NULL,\
     };\
     Json name##__data = {\
         .parsed = 0,\
@@ -37,6 +38,7 @@ typedef struct Json {
         .buffer = name##__buffer,\
         .busy = name##__busy,\
         .byIndex = name##__byIndex,\
+        .stringBuffer = NULL,\
     };\
     static Json name##__data = {\
         .parsed = 0,\
