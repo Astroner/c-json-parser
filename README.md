@@ -5,11 +5,13 @@ This is simple C STB-like library for json parsing, that uses static memory.
  - [Usage](#usage)
  - [API Reference](#api-reference)
      - [Creating new instance](#creating-new-instance)
+         - [Referenceable elements](#referenceable-elements)
          - [Macros](#macros)
              - [Json_create](#json_create)
              - [Json_createStatic](#json_createstatic)
          - [Functions](#functions)
              - [Json_allocate](#json_allocate)
+         - [Resetting](#resetting)
      - [Working with types](#working-with-types)
          - [Null](#null)
          - [Number](#number)
@@ -42,7 +44,7 @@ This is simple C STB-like library for json parsing, that uses static memory.
 int main(void) {
     Json_create(json, 20); // Creating Json object with macro
 
-    Json_setSource(json, "[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]"); // setting string source
+    Json_setSource(json, "[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]"); // Setting string source
 
     if(Json_parse(json) < 0) { // Parsing values
         printf("Failed to parse JSON");
@@ -83,9 +85,8 @@ int main(void) {
 As in any STB-like library you need to once include implementation by defining JSON_IMPLEMENTATION before including the library.
 
 Let's take a closer look at used functions:
- - **Json_createStatic** macro takes 3 arguments:
+ - **Json_create** macro creates empty **Json** structure. It takes 2 arguments:
     - **name** - the name of the Json variable
-    - **src** - source string
     - **buffer size** - size of memory buffer to store values. Size is not provided in bytes but in number of referenceable elements. For example:
         ```json
         {
@@ -95,6 +96,7 @@ Let's take a closer look at used functions:
         }
         ```
         In this JSON we only have 5 referenceable elements: root, "a", "b", "c" and 22 as array element.
+ - **Json_setSource** - sets string source for **Json** structure
  - **Json_parse** - parses **Json** object. If there is syntax error or insufficient memory it returns -1 otherwise 0.
  - **Json_asArray** checks that provided **JsonValue** is an array and if so uses **length** pointer to return array length.
  - **Json_getIndex** checks that provided **JsonValue** of **Json** is an array and if so returns **JsonValue** from provided index otherwise returns **NULL**
@@ -102,6 +104,7 @@ Let's take a closer look at used functions:
 
 Overall, basic usage algorithm looks like:
  - Create Json object
+ - Set source with **Json_setSource**
  - Parse it with **Json_parse()**
  - Use **Json_getRoot()** to get the root
  - Use **Json_getKey()** or **Json_getIndex()** to traverse through the Json structure
@@ -111,6 +114,18 @@ Overall, basic usage algorithm looks like:
 ## Creating new instance
 This section describes functions and macros for **Json** structure initialization
 
+### Referenceable elements
+Referenceable element is an any JSON value that you can reference to: root element, object properties, array elements.
+For example:
+```json
+{
+    "a": 33,
+    "b": "str",
+    "c": [22]
+}
+```
+In this JSON we only have 5 referenceable elements: root, "a", "b", "c" and 22 as array element.
+
 ### Macros
 #### Json_create
 This macro expands to definition of buffers and structures for **Json** structure
@@ -118,7 +133,7 @@ This macro expands to definition of buffers and structures for **Json** structur
 #define Json_create(name, elementsNumber)
 ```
  - **name** - name of the variable to define to store pointer to **Json** structure
- - **elementsNumber** - maximum number of referenceable elements to store
+ - **elementsNumber** - maximum number of [referenceable elements](#referenceable-elements) to store
 
 Since it is just a macro it can be used both in global space and in function scope:
 ```c
@@ -148,7 +163,7 @@ This function allocates **Json** using **malloc** for provided **elementsNumber*
 Json* Json_allocate(size_t elementsNumber);
 ```
  - **returns** - **NULLABLE** - pointer to allocated **Json** structure or **NULL** if **malloc** failed
- - **elementsNumber** - maximum number of referenceable elements to store
+ - **elementsNumber** - maximum number of [referenceable elements](#referenceable-elements) elements to store
 
 Use **Json_free** to free **Json** structure
 ```c
@@ -172,6 +187,13 @@ int main(void) {
     return 0;
 }
 ```
+
+### Resetting
+Function **Json_reset** resets **Json** structure
+```c
+void Json_reset(Json* json);
+```
+ - **json** - **Json** structure to reset
 
 ## Working with types
 Here is the list of functions to work with data types.
