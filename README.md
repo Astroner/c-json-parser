@@ -22,7 +22,7 @@ This is simple C STB-like library for json parsing, that uses static memory.
                  - [Print](#print)
                  - [Iterate](#iterate)
          - [Array](#array)
-             - [Accessing element](#accessing-elements)
+             - [Accessing elements](#accessing-elements)
          - [Object](#object)
              - [Accessing properties](#accessing-properties)
              - [Iterating over properties](#iterating-over-properties)
@@ -300,7 +300,7 @@ int main(void) {
     return 0;
 }
 ```
-**JsonStringIterator_init()** initiates iterator with provided **Json** and **JsonValue** and **JsonStringIterator_next()** just iterates each char of the string.
+**JsonStringIterator_init()** initiates iterator with provided **Json** and **JsonValue**. **JsonStringIterator_next()** just iterates each char of the string.
 
 ### Array
 Use function **Json_asArray** to interpret **JsonValue** as array.
