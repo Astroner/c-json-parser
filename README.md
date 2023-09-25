@@ -33,7 +33,6 @@ This is simple C STB-like library for json parsing, that uses static memory.
      - [Printing](#printing)
          - [Json_print](#json_print)
          - [Json_printType](#json_printtype)
- - [Q&A](#qa)
 
 # Usage 
 ```c
@@ -630,6 +629,3 @@ This function prints type of the given **JsonValue** into stdout
 ```c
 void Json_printType(JsonValue* root);
 ```
-
-# Q&A
-kekB
