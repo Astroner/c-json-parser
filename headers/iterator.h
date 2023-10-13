@@ -8,7 +8,7 @@ typedef struct Json_internal_Iterator {
     char* src;
     char current;
     size_t index;
-    int ended;
+    int finished;
 } Json_internal_Iterator;
 
 char Json_internal_Iterator_next(Json_internal_Iterator* iterator);

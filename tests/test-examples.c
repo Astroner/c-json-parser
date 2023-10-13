@@ -68,5 +68,7 @@ int main(int argc, char** argv) {
 
     closedir(dir);
 
+    printf("\nFINISHED\n");
+
     return 0;
 }

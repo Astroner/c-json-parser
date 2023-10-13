@@ -4,11 +4,11 @@
 
 
 char Json_internal_Iterator_next(Json_internal_Iterator* iterator) {
-    if(iterator->ended) return '\0';
+    if(iterator->finished) return '\0';
 
     iterator->current = iterator->src[++iterator->index];
 
-    if(iterator->current == '\0') iterator->ended = 1;
+    if(iterator->current == '\0') iterator->finished = 1;
 
     return iterator->current;
 }

@@ -12,11 +12,11 @@
 
 Json* Json_allocate(size_t elementsNumber) {
     char* mem = (char*)malloc(
-        sizeof(Json)
-        + sizeof(int) * elementsNumber
-        + sizeof(int) * elementsNumber
-        + sizeof(Json_internal_TableItem) * elementsNumber 
-        + sizeof(Json_internal_Table)
+        sizeof(Json) // root structure
+        + sizeof(int) * elementsNumber // busy flags
+        + sizeof(int) * elementsNumber // isIndex flags
+        + sizeof(Json_internal_TableItem) * elementsNumber // table buffer
+        + sizeof(Json_internal_Table) // table
     );
 
     if(!mem) return NULL;
@@ -65,18 +65,22 @@ int Json_parse(Json* json) {
     Json_internal_Iterator iterator = {
         .index = -1,
         .src = json->table->stringBuffer,
-        .ended = 0
+        .finished = 0
     };
 
     Json_internal_ParsingCtx ctx = {
-        .nesting = NestedStructureNone,
+        .nesting = Json_internal_NestedStructureNone,
+        .table = json->table,
+        .namespaceCounter = 0
     };
 
     Json_internal_Destination dest = {
         .isRoot = 1,
     };
 
-    CHECK(Json_internal_parseValue(&iterator, &ctx, json, &dest), "Parsing basis");
+    Json_internal_TableItem* root = Json_internal_Table_set(json->table, &dest);
+
+    CHECK(Json_internal_parseValue(&iterator, &ctx, &root->typedValue), "Parsing basis");
 
     json->parsed = 1;
     return 0;
@@ -136,7 +140,7 @@ JsonValue* Json_getKey(Json* json, JsonValue* item, char* key) {
     if(!json->parsed || !item) return NULL;
 
     if(item->type != Json_internal_TableValueTypeObject) return NULL;
-    Json_internal_TableItem* result = Json_internal_Table_getByKey(json->table, key, item->value.object.contextIndex);
+    Json_internal_TableItem* result = Json_internal_Table_getByKey(json->table, key, item->value.object.namespace);
     
     if(!result) return NULL;
 
@@ -148,7 +152,7 @@ JsonValue* Json_getIndex(Json* json, JsonValue* item, size_t index) {
 
     if(item->type != Json_internal_TableValueTypeArray) return NULL;
 
-    Json_internal_TableItem* result = Json_internal_Table_getByIndex(json->table, index, item->value.array.contextIndex);
+    Json_internal_TableItem* result = Json_internal_Table_getByIndex(json->table, index, item->value.array.namespace);
 
     if(!result) return NULL;
 
@@ -332,7 +336,7 @@ int JsonObjectIterator_init(Json* json, JsonValue* obj, JsonObjectIterator* iter
     }
 
     iterator->json = json;
-    iterator->ctx = obj->value.object.contextIndex;
+    iterator->namespace = obj->value.object.namespace;
     iterator->size = obj->value.object.size;
     iterator->index = 0;
     iterator->found = 0;
@@ -346,7 +350,7 @@ int JsonObjectIterator_next(JsonObjectIterator* iterator, JsonProperty* property
     for(size_t i = iterator->index; i < iterator->json->table->maxSize; i++) {
         if(
             !iterator->json->table->busy[i] ||
-            iterator->json->table->buffer[i].contextIndex != iterator->ctx
+            iterator->json->table->buffer[i].namespace != iterator->namespace
         ) continue;
 
         iterator->index = i + 1;
