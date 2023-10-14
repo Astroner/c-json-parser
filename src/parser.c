@@ -23,15 +23,9 @@ static Json_internal_ParsingStatus Json_internal_parseArray(
 
     size_t arrSize = 0;
     while(1) {
-        Json_internal_Destination elementDestination = {
-            .isIndex = 1,
-            .index = arrSize,
-            .namespace = arrayIndex
-        };
-
         Json_internal_TableItem* element;
 
-        CHECK_BOOLEAN((element = Json_internal_Table_set(ctx->table, &elementDestination)), Json_internal_ParsingStatusError, "Setting table item");
+        CHECK_BOOLEAN((element = Json_internal_Table_setByIndex(ctx->table, arrSize, arrayIndex)), Json_internal_ParsingStatusError, "Setting table item");
 
         Json_internal_ParsingStatus status = Json_internal_parseValue(iterator, ctx, &element->typedValue);
 
@@ -285,18 +279,20 @@ static Json_internal_ParsingStatus Json_internal_parseField(Json_internal_Iterat
         return Json_internal_ParsingStatusError; 
     }
 
+    JsonStringRange name;
 
-    Json_internal_Destination fieldDest = {
-        .isRoot = 0,
-        .namespace = objectCtx
-    };
-
-    CHECK(Json_internal_parseString(iterator, &fieldDest.name), "Parsing key string");
+    CHECK(Json_internal_parseString(iterator, &name), "Parsing key string");
 
     CHECK(Json_internal_Iterator_skipSpaceTo(iterator, ':'), "Skipping chars to ':'");
 
     Json_internal_TableItem* field;
-    CHECK_BOOLEAN((field = Json_internal_Table_set(ctx->table, &fieldDest)), Json_internal_ParsingStatusError, "Setting table item");
+    CHECK_BOOLEAN((field = Json_internal_Table_setByKey(
+        ctx->table, 
+        iterator->src, 
+        name.start, 
+        name.length, 
+        objectCtx
+    )), Json_internal_ParsingStatusError, "Setting table item");
 
     CHECK_RETURN(Json_internal_parseValue(iterator, ctx, &field->typedValue), "Field value");
 }

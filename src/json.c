@@ -34,10 +34,10 @@ Json* Json_allocate(size_t elementsNumber) {
     table->buffer = (void*)buffer;
     table->size = 0;
     table->maxSize = elementsNumber;
-    table->stringBuffer = NULL;
 
     json->parsed = 0;
     json->table = table;
+    json->src = NULL;
 
 
     return json;
@@ -51,7 +51,7 @@ void Json_reset(Json* json) {
 
 void Json_setSource(Json* json, char* src) {
     json->parsed = 0;
-    json->table->stringBuffer = src;
+    json->src = src;
 }
 
 void Json_free(Json* json) {
@@ -64,7 +64,7 @@ int Json_parse(Json* json) {
 
     Json_internal_Iterator iterator = {
         .index = -1,
-        .src = json->table->stringBuffer,
+        .src = json->src,
         .finished = 0
     };
 
@@ -74,11 +74,7 @@ int Json_parse(Json* json) {
         .namespaceCounter = 0
     };
 
-    Json_internal_Destination dest = {
-        .isRoot = 1,
-    };
-
-    Json_internal_TableItem* root = Json_internal_Table_set(json->table, &dest);
+    Json_internal_TableItem* root = Json_internal_Table_setRoot(json->table);
 
     CHECK(Json_internal_parseValue(&iterator, &ctx, &root->typedValue), "Parsing basis");
 
@@ -178,7 +174,7 @@ static void Json_internal_printValue(Json* json, JsonValue* val, size_t depth) {
 
         case Json_internal_TableValueTypeString: {
             printf("\"");
-            Json_internal_printRange(json->table->stringBuffer, val->value.string.start, val->value.string.length);
+            Json_internal_printRange(json->src, val->value.string.start, val->value.string.length);
             printf("\"");
             break;
         }
@@ -382,20 +378,20 @@ void JsonStringRange_copy(Json* json, JsonStringRange* range, char* buffer, size
     }
 
     for(size_t i = 0; i < limit; i++) {
-        buffer[i] = json->table->stringBuffer[i + range->start];
+        buffer[i] = json->src[i + range->start];
     }
 
     buffer[limit] = '\0';
 }
 
 void JsonStringRange_print(Json* json, JsonStringRange* range) {
-    Json_internal_printRange(json->table->stringBuffer, range->start, range->length);
+    Json_internal_printRange(json->src, range->start, range->length);
 }
 
 void JsonStringIterator_init(Json* json, JsonStringRange* range, JsonStringIterator* iterator) {
     iterator->index = range->start;
     iterator->end = range->start + range->length;
-    iterator->buffer = json->table->stringBuffer;
+    iterator->buffer = json->src;
 }
 
 char JsonStringIterator_next(JsonStringIterator* iterator) {

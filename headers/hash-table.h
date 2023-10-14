@@ -43,9 +43,10 @@ typedef struct JsonValue {
 typedef struct Json_internal_TableItem {
     size_t namespace;
 
+    size_t arrayIndex;
     JsonStringRange name;
 
-    size_t index;
+    unsigned long hash;
 
     JsonValue typedValue;
 } Json_internal_TableItem;
@@ -57,17 +58,6 @@ typedef struct Json_internal_Table {
     size_t size;
 
     Json_internal_TableItem* buffer;
-
-    char* stringBuffer;
 } Json_internal_Table;
-
-typedef struct Json_internal_Destination {
-    int isRoot;
-    JsonStringRange name;
-    size_t namespace;
-
-    int isIndex;
-    size_t index;
-} Json_internal_Destination;
 
 #endif // HASH_TABLE_H
