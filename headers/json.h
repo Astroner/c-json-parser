@@ -83,7 +83,7 @@ JsonValue* Json_chainVA(Json* json, JsonValue* item, ...);
 
 typedef struct JsonObjectIterator {
     Json* json;
-    size_t namespace;
+    size_t namespaceID;
     size_t size;
     size_t index;
     size_t found;

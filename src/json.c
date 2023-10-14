@@ -136,7 +136,7 @@ JsonValue* Json_getKey(Json* json, JsonValue* item, char* key) {
     if(!json->parsed || !item) return NULL;
 
     if(item->type != Json_internal_TableValueTypeObject) return NULL;
-    Json_internal_TableItem* result = Json_internal_Table_getByKey(json->table, key, item->value.object.namespace);
+    Json_internal_TableItem* result = Json_internal_Table_getByKey(json->table, key, item->value.object.namespaceID);
     
     if(!result) return NULL;
 
@@ -148,7 +148,7 @@ JsonValue* Json_getIndex(Json* json, JsonValue* item, size_t index) {
 
     if(item->type != Json_internal_TableValueTypeArray) return NULL;
 
-    Json_internal_TableItem* result = Json_internal_Table_getByIndex(json->table, index, item->value.array.namespace);
+    Json_internal_TableItem* result = Json_internal_Table_getByIndex(json->table, index, item->value.array.namespaceID);
 
     if(!result) return NULL;
 
@@ -332,7 +332,7 @@ int JsonObjectIterator_init(Json* json, JsonValue* obj, JsonObjectIterator* iter
     }
 
     iterator->json = json;
-    iterator->namespace = obj->value.object.namespace;
+    iterator->namespaceID = obj->value.object.namespaceID;
     iterator->size = obj->value.object.size;
     iterator->index = 0;
     iterator->found = 0;
@@ -346,7 +346,7 @@ int JsonObjectIterator_next(JsonObjectIterator* iterator, JsonProperty* property
     for(size_t i = iterator->index; i < iterator->json->table->maxSize; i++) {
         if(
             !iterator->json->table->busy[i] ||
-            iterator->json->table->buffer[i].namespace != iterator->namespace
+            iterator->json->table->buffer[i].namespaceID != iterator->namespaceID
         ) continue;
 
         iterator->index = i + 1;

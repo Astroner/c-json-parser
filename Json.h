@@ -25,12 +25,12 @@ typedef union Json_internal_TableValueUnion {
     int boolean;
 
     struct {
-        size_t namespace;
+        size_t namespaceID;
         size_t size;
     } object;
     
     struct {
-        size_t namespace;
+        size_t namespaceID;
         size_t size;
     } array;
 } Json_internal_TableValueUnion;
@@ -41,7 +41,7 @@ typedef struct JsonValue {
 } JsonValue;
 
 typedef struct Json_internal_TableItem {
-    size_t namespace;
+    size_t namespaceID;
 
     size_t arrayIndex;
     JsonStringRange name;
@@ -147,7 +147,7 @@ JsonValue* Json_chainVA(Json* json, JsonValue* item, ...);
 
 typedef struct JsonObjectIterator {
     Json* json;
-    size_t namespace;
+    size_t namespaceID;
     size_t size;
     size_t index;
     size_t found;
@@ -192,13 +192,13 @@ void Json_printType(JsonValue* root);
 #include <stdlib.h>
 
 
-static unsigned long Json_internal_hashChars(char* str, size_t namespace) {
+static unsigned long Json_internal_hashChars(char* str, size_t namespaceID) {
     unsigned long hash = 5381;
     int c;
     while ((c = *str++))
         hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
 
-    unsigned char* ctxBytes = (void*)&namespace;
+    unsigned char* ctxBytes = (void*)&namespaceID;
 
     for(size_t i = 0; i < sizeof(size_t); i++)
         hash = ((hash << 5) + hash) + ctxBytes[i];
@@ -207,7 +207,7 @@ static unsigned long Json_internal_hashChars(char* str, size_t namespace) {
     return hash;
 }
 
-static unsigned long Json_internal_hashIndex(size_t index, size_t namespace) {
+static unsigned long Json_internal_hashIndex(size_t index, size_t namespaceID) {
     unsigned long hash = 5381;
     
     unsigned char* indexBytes = (void*)&index;
@@ -216,7 +216,7 @@ static unsigned long Json_internal_hashIndex(size_t index, size_t namespace) {
         hash = ((hash << 5) + hash) + indexBytes[i];
 
 
-    unsigned char* ctxBytes = (void*)&namespace;
+    unsigned char* ctxBytes = (void*)&namespaceID;
 
     for(size_t i = 0; i < sizeof(size_t); i++)
         hash = ((hash << 5) + hash) + ctxBytes[i];
@@ -225,13 +225,13 @@ static unsigned long Json_internal_hashIndex(size_t index, size_t namespace) {
     return hash;
 }
 
-static unsigned long Json_internal_hashKey(char* strBuffer, size_t nameStart, size_t nameLength, size_t namespace) {
+static unsigned long Json_internal_hashKey(char* strBuffer, size_t nameStart, size_t nameLength, size_t namespaceID) {
     unsigned long hash = 5381;
 
     for(size_t i = nameStart; i < nameStart + nameLength; i++)
         hash = ((hash << 5) + hash) + strBuffer[i];
 
-    unsigned char* ctxBytes = (void*)&namespace;
+    unsigned char* ctxBytes = (void*)&namespaceID;
 
     for(size_t i = 0; i < sizeof(size_t); i++)
         hash = ((hash << 5) + hash) + ctxBytes[i];
@@ -247,7 +247,7 @@ Json_internal_TableItem* Json_internal_Table_setRoot(Json_internal_Table* table)
     return table->buffer;
 }
 
-static Json_internal_TableItem* Json_internal_Table_setByHash(Json_internal_Table* table, unsigned long hash, size_t namespace, int byIndex) {
+static Json_internal_TableItem* Json_internal_Table_setByHash(Json_internal_Table* table, unsigned long hash, size_t namespaceID, int byIndex) {
     size_t startIndex = hash % table->maxSize;
 
     size_t index = startIndex;
@@ -266,7 +266,7 @@ static Json_internal_TableItem* Json_internal_Table_setByHash(Json_internal_Tabl
         table->byIndex[index] = 1;
     }
 
-    table->buffer[index].namespace = namespace;
+    table->buffer[index].namespaceID = namespaceID;
     table->buffer[index].hash = hash;
 
     table->size++;
@@ -274,12 +274,12 @@ static Json_internal_TableItem* Json_internal_Table_setByHash(Json_internal_Tabl
     return table->buffer + index;
 }
 
-Json_internal_TableItem* Json_internal_Table_setByKey(Json_internal_Table* table, char* stringBuffer, size_t start, size_t length, size_t namespace) {
+Json_internal_TableItem* Json_internal_Table_setByKey(Json_internal_Table* table, char* stringBuffer, size_t start, size_t length, size_t namespaceID) {
     if(table->size == table->maxSize) return NULL;
 
-    unsigned long hash = Json_internal_hashKey(stringBuffer, start, length, namespace);
+    unsigned long hash = Json_internal_hashKey(stringBuffer, start, length, namespaceID);
 
-    Json_internal_TableItem* item = Json_internal_Table_setByHash(table, hash, namespace, 0);
+    Json_internal_TableItem* item = Json_internal_Table_setByHash(table, hash, namespaceID, 0);
 
     if(!item) return NULL;
 
@@ -289,12 +289,12 @@ Json_internal_TableItem* Json_internal_Table_setByKey(Json_internal_Table* table
     return item;
 }
 
-Json_internal_TableItem* Json_internal_Table_setByIndex(Json_internal_Table* table, size_t index, size_t namespace) {
+Json_internal_TableItem* Json_internal_Table_setByIndex(Json_internal_Table* table, size_t index, size_t namespaceID) {
     if(table->size == table->maxSize) return NULL;
 
-    unsigned long hash = Json_internal_hashIndex(index, namespace);
+    unsigned long hash = Json_internal_hashIndex(index, namespaceID);
 
-    Json_internal_TableItem* item = Json_internal_Table_setByHash(table, hash, namespace, 1);
+    Json_internal_TableItem* item = Json_internal_Table_setByHash(table, hash, namespaceID, 1);
 
     if(!item) return NULL;
 
@@ -309,8 +309,8 @@ void Json_internal_Table_print(Json_internal_Table* table) {
     }
 }
 
-Json_internal_TableItem* Json_internal_Table_getByKey(Json_internal_Table* table, char* key, size_t namespace) {
-    unsigned long hash = Json_internal_hashChars(key, namespace);
+Json_internal_TableItem* Json_internal_Table_getByKey(Json_internal_Table* table, char* key, size_t namespaceID) {
+    unsigned long hash = Json_internal_hashChars(key, namespaceID);
 
     size_t startIndex = hash % table->maxSize;
     
@@ -321,7 +321,7 @@ Json_internal_TableItem* Json_internal_Table_getByKey(Json_internal_Table* table
 
         if(
             !table->byIndex[index]
-            && current->namespace == namespace 
+            && current->namespaceID == namespaceID 
             && current->hash == hash
         ) {
             break;
@@ -339,9 +339,9 @@ Json_internal_TableItem* Json_internal_Table_getByKey(Json_internal_Table* table
     return current;
 }
 
-Json_internal_TableItem* Json_internal_Table_getByIndex(Json_internal_Table* table, size_t index, size_t namespace) {
+Json_internal_TableItem* Json_internal_Table_getByIndex(Json_internal_Table* table, size_t index, size_t namespaceID) {
 
-    unsigned long hash = Json_internal_hashIndex(index, namespace);
+    unsigned long hash = Json_internal_hashIndex(index, namespaceID);
 
     size_t startIndex = hash % table->maxSize;
 
@@ -354,7 +354,7 @@ Json_internal_TableItem* Json_internal_Table_getByIndex(Json_internal_Table* tab
 
         if(
             table->byIndex[bufferIndex] 
-            && current->namespace == namespace 
+            && current->namespaceID == namespaceID 
             && current->arrayIndex == index
         ) {
             break;
@@ -616,7 +616,7 @@ static Json_internal_ParsingStatus Json_internal_parseArray(
     size_t arrayIndex = ++ctx->namespaceCounter;
 
     result->type = Json_internal_TableValueTypeArray;
-    result->value.array.namespace = arrayIndex;
+    result->value.array.namespaceID = arrayIndex;
     result->value.array.size = 0;
 
 
@@ -908,7 +908,7 @@ static Json_internal_ParsingStatus Json_internal_parseObject(
     size_t objIndex = ++ctx->namespaceCounter;
 
     result->type = Json_internal_TableValueTypeObject;
-    result->value.object.namespace = objIndex;
+    result->value.object.namespaceID = objIndex;
     result->value.object.size = 0;
 
     size_t size = 0;
@@ -1130,7 +1130,7 @@ JsonValue* Json_getKey(Json* json, JsonValue* item, char* key) {
     if(!json->parsed || !item) return NULL;
 
     if(item->type != Json_internal_TableValueTypeObject) return NULL;
-    Json_internal_TableItem* result = Json_internal_Table_getByKey(json->table, key, item->value.object.namespace);
+    Json_internal_TableItem* result = Json_internal_Table_getByKey(json->table, key, item->value.object.namespaceID);
     
     if(!result) return NULL;
 
@@ -1142,7 +1142,7 @@ JsonValue* Json_getIndex(Json* json, JsonValue* item, size_t index) {
 
     if(item->type != Json_internal_TableValueTypeArray) return NULL;
 
-    Json_internal_TableItem* result = Json_internal_Table_getByIndex(json->table, index, item->value.array.namespace);
+    Json_internal_TableItem* result = Json_internal_Table_getByIndex(json->table, index, item->value.array.namespaceID);
 
     if(!result) return NULL;
 
@@ -1326,7 +1326,7 @@ int JsonObjectIterator_init(Json* json, JsonValue* obj, JsonObjectIterator* iter
     }
 
     iterator->json = json;
-    iterator->namespace = obj->value.object.namespace;
+    iterator->namespaceID = obj->value.object.namespaceID;
     iterator->size = obj->value.object.size;
     iterator->index = 0;
     iterator->found = 0;
@@ -1340,7 +1340,7 @@ int JsonObjectIterator_next(JsonObjectIterator* iterator, JsonProperty* property
     for(size_t i = iterator->index; i < iterator->json->table->maxSize; i++) {
         if(
             !iterator->json->table->busy[i] ||
-            iterator->json->table->buffer[i].namespace != iterator->namespace
+            iterator->json->table->buffer[i].namespaceID != iterator->namespaceID
         ) continue;
 
         iterator->index = i + 1;

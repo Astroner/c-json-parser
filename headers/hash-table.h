@@ -25,12 +25,12 @@ typedef union Json_internal_TableValueUnion {
     int boolean;
 
     struct {
-        size_t namespace;
+        size_t namespaceID;
         size_t size;
     } object;
     
     struct {
-        size_t namespace;
+        size_t namespaceID;
         size_t size;
     } array;
 } Json_internal_TableValueUnion;
@@ -41,7 +41,7 @@ typedef struct JsonValue {
 } JsonValue;
 
 typedef struct Json_internal_TableItem {
-    size_t namespace;
+    size_t namespaceID;
 
     size_t arrayIndex;
     JsonStringRange name;

@@ -17,7 +17,7 @@ static Json_internal_ParsingStatus Json_internal_parseArray(
     size_t arrayIndex = ++ctx->namespaceCounter;
 
     result->type = Json_internal_TableValueTypeArray;
-    result->value.array.namespace = arrayIndex;
+    result->value.array.namespaceID = arrayIndex;
     result->value.array.size = 0;
 
 
@@ -309,7 +309,7 @@ static Json_internal_ParsingStatus Json_internal_parseObject(
     size_t objIndex = ++ctx->namespaceCounter;
 
     result->type = Json_internal_TableValueTypeObject;
-    result->value.object.namespace = objIndex;
+    result->value.object.namespaceID = objIndex;
     result->value.object.size = 0;
 
     size_t size = 0;

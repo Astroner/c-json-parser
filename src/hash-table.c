@@ -5,13 +5,13 @@
 #include <stdio.h>
 
 
-static unsigned long Json_internal_hashChars(char* str, size_t namespace) {
+static unsigned long Json_internal_hashChars(char* str, size_t namespaceID) {
     unsigned long hash = 5381;
     int c;
     while ((c = *str++))
         hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
 
-    unsigned char* ctxBytes = (void*)&namespace;
+    unsigned char* ctxBytes = (void*)&namespaceID;
 
     for(size_t i = 0; i < sizeof(size_t); i++)
         hash = ((hash << 5) + hash) + ctxBytes[i];
@@ -20,7 +20,7 @@ static unsigned long Json_internal_hashChars(char* str, size_t namespace) {
     return hash;
 }
 
-static unsigned long Json_internal_hashIndex(size_t index, size_t namespace) {
+static unsigned long Json_internal_hashIndex(size_t index, size_t namespaceID) {
     unsigned long hash = 5381;
     
     unsigned char* indexBytes = (void*)&index;
@@ -29,7 +29,7 @@ static unsigned long Json_internal_hashIndex(size_t index, size_t namespace) {
         hash = ((hash << 5) + hash) + indexBytes[i];
 
 
-    unsigned char* ctxBytes = (void*)&namespace;
+    unsigned char* ctxBytes = (void*)&namespaceID;
 
     for(size_t i = 0; i < sizeof(size_t); i++)
         hash = ((hash << 5) + hash) + ctxBytes[i];
@@ -38,13 +38,13 @@ static unsigned long Json_internal_hashIndex(size_t index, size_t namespace) {
     return hash;
 }
 
-static unsigned long Json_internal_hashKey(char* strBuffer, size_t nameStart, size_t nameLength, size_t namespace) {
+static unsigned long Json_internal_hashKey(char* strBuffer, size_t nameStart, size_t nameLength, size_t namespaceID) {
     unsigned long hash = 5381;
 
     for(size_t i = nameStart; i < nameStart + nameLength; i++)
         hash = ((hash << 5) + hash) + strBuffer[i];
 
-    unsigned char* ctxBytes = (void*)&namespace;
+    unsigned char* ctxBytes = (void*)&namespaceID;
 
     for(size_t i = 0; i < sizeof(size_t); i++)
         hash = ((hash << 5) + hash) + ctxBytes[i];
@@ -60,7 +60,7 @@ Json_internal_TableItem* Json_internal_Table_setRoot(Json_internal_Table* table)
     return table->buffer;
 }
 
-static Json_internal_TableItem* Json_internal_Table_setByHash(Json_internal_Table* table, unsigned long hash, size_t namespace, int byIndex) {
+static Json_internal_TableItem* Json_internal_Table_setByHash(Json_internal_Table* table, unsigned long hash, size_t namespaceID, int byIndex) {
     size_t startIndex = hash % table->maxSize;
 
     size_t index = startIndex;
@@ -79,7 +79,7 @@ static Json_internal_TableItem* Json_internal_Table_setByHash(Json_internal_Tabl
         table->byIndex[index] = 1;
     }
 
-    table->buffer[index].namespace = namespace;
+    table->buffer[index].namespaceID = namespaceID;
     table->buffer[index].hash = hash;
 
     table->size++;
@@ -87,12 +87,12 @@ static Json_internal_TableItem* Json_internal_Table_setByHash(Json_internal_Tabl
     return table->buffer + index;
 }
 
-Json_internal_TableItem* Json_internal_Table_setByKey(Json_internal_Table* table, char* stringBuffer, size_t start, size_t length, size_t namespace) {
+Json_internal_TableItem* Json_internal_Table_setByKey(Json_internal_Table* table, char* stringBuffer, size_t start, size_t length, size_t namespaceID) {
     if(table->size == table->maxSize) return NULL;
 
-    unsigned long hash = Json_internal_hashKey(stringBuffer, start, length, namespace);
+    unsigned long hash = Json_internal_hashKey(stringBuffer, start, length, namespaceID);
 
-    Json_internal_TableItem* item = Json_internal_Table_setByHash(table, hash, namespace, 0);
+    Json_internal_TableItem* item = Json_internal_Table_setByHash(table, hash, namespaceID, 0);
 
     if(!item) return NULL;
 
@@ -102,12 +102,12 @@ Json_internal_TableItem* Json_internal_Table_setByKey(Json_internal_Table* table
     return item;
 }
 
-Json_internal_TableItem* Json_internal_Table_setByIndex(Json_internal_Table* table, size_t index, size_t namespace) {
+Json_internal_TableItem* Json_internal_Table_setByIndex(Json_internal_Table* table, size_t index, size_t namespaceID) {
     if(table->size == table->maxSize) return NULL;
 
-    unsigned long hash = Json_internal_hashIndex(index, namespace);
+    unsigned long hash = Json_internal_hashIndex(index, namespaceID);
 
-    Json_internal_TableItem* item = Json_internal_Table_setByHash(table, hash, namespace, 1);
+    Json_internal_TableItem* item = Json_internal_Table_setByHash(table, hash, namespaceID, 1);
 
     if(!item) return NULL;
 
@@ -122,8 +122,8 @@ void Json_internal_Table_print(Json_internal_Table* table) {
     }
 }
 
-Json_internal_TableItem* Json_internal_Table_getByKey(Json_internal_Table* table, char* key, size_t namespace) {
-    unsigned long hash = Json_internal_hashChars(key, namespace);
+Json_internal_TableItem* Json_internal_Table_getByKey(Json_internal_Table* table, char* key, size_t namespaceID) {
+    unsigned long hash = Json_internal_hashChars(key, namespaceID);
 
     size_t startIndex = hash % table->maxSize;
     
@@ -134,7 +134,7 @@ Json_internal_TableItem* Json_internal_Table_getByKey(Json_internal_Table* table
 
         if(
             !table->byIndex[index]
-            && current->namespace == namespace 
+            && current->namespaceID == namespaceID 
             && current->hash == hash
         ) {
             break;
@@ -152,9 +152,9 @@ Json_internal_TableItem* Json_internal_Table_getByKey(Json_internal_Table* table
     return current;
 }
 
-Json_internal_TableItem* Json_internal_Table_getByIndex(Json_internal_Table* table, size_t index, size_t namespace) {
+Json_internal_TableItem* Json_internal_Table_getByIndex(Json_internal_Table* table, size_t index, size_t namespaceID) {
 
-    unsigned long hash = Json_internal_hashIndex(index, namespace);
+    unsigned long hash = Json_internal_hashIndex(index, namespaceID);
 
     size_t startIndex = hash % table->maxSize;
 
@@ -167,7 +167,7 @@ Json_internal_TableItem* Json_internal_Table_getByIndex(Json_internal_Table* tab
 
         if(
             table->byIndex[bufferIndex] 
-            && current->namespace == namespace 
+            && current->namespaceID == namespaceID 
             && current->arrayIndex == index
         ) {
             break;
