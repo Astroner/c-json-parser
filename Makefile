@@ -1,4 +1,4 @@
-CC=gcc-12
+CC=gcc
 
 SOURCES=$(wildcard ./src/*.c)
 OBJECTS=$(SOURCES:.c=.o)

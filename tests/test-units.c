@@ -54,7 +54,7 @@ void testSmallArray(void) {
     assert(sVal == 22.f);
 }
 
-void testAllocate() {
+void testAllocate(void) {
     Json* json = Json_allocate(20);
 
     Json_setSource(json, "[22]");

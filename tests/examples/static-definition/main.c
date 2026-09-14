@@ -3,7 +3,7 @@
 
 Json_create(json, 20)
 
-int main() {
+int main(void) {
     Json_setSource(json, "[22]");
 
     Json_parse(json);

@@ -695,12 +695,14 @@ static Json_internal_ParsingStatus Json_internal_parseString(Json_internal_Itera
     char ch;
     while((ch = Json_internal_Iterator_next(iterator))) {
         LOG_LN("CHAR: '%c'", ch);
+
+        if(isLiteral) {
+            isLiteral = 0;
+            length++;
+            continue;
+        }
+
         if(ch == '"') {
-            if(isLiteral) {
-                isLiteral = 0;
-                length++;
-                continue;
-            }
             LOG_LN("String start: %zu, Length: %zu", start, length);
             LOG("Content: \"");
             LOGS_ONLY(
